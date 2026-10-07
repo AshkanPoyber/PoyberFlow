@@ -1,0 +1,108 @@
+/* ============================================================
+   Design Tokens — PoyberFlow
+   All theme-dependent values live here as CSS custom properties.
+   Never hardcode colors anywhere else.
+   ============================================================ */
+
+:root,
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --color-bg-app: #0b0d12;
+  --color-bg-surface: #11141b;
+  --color-bg-elevated: #171a23;
+
+  /* Borders */
+  --color-border: #252a36;
+  --color-border-strong: #323847;
+
+  /* Text */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Brand */
+  --color-brand: #6366f1;
+  --color-brand-hover: #7c7ff5;
+  --color-brand-soft: rgba(99, 102, 241, 0.12);
+
+  /* Accent */
+  --color-accent: #06b6d4;
+  --color-accent-soft: rgba(6, 182, 212, 0.12);
+
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Grid */
+  --color-grid: #1a1f2a;
+  --color-grid-strong: #232838;
+
+  /* Shadows */
+  --shadow-node: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-node-selected:
+    0 0 0 2px var(--color-brand), 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(99, 102, 241, 0.15);
+
+  /* Node colors (per type, keep palette controlled) */
+  --node-start-accent: #22c55e;
+  --node-http-accent: #06b6d4;
+  --node-if-accent: #8b5cf6;
+  --node-delay-accent: #f59e0b;
+  --node-output-accent: #6366f1;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --color-bg-app: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-elevated: #f1f5f9;
+
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  --color-brand: #6366f1;
+  --color-brand-hover: #4f46e5;
+  --color-brand-soft: rgba(99, 102, 241, 0.08);
+
+  --color-accent: #06b6d4;
+  --color-accent-soft: rgba(6, 182, 212, 0.1);
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+
+  --color-grid: #e2e8f0;
+  --color-grid-strong: #cbd5e1;
+
+  --shadow-node:
+    0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-node-selected:
+    0 0 0 2px var(--color-brand), 0 1px 2px rgba(15, 23, 42, 0.06),
+    0 8px 24px rgba(99, 102, 241, 0.18);
+
+  --node-start-accent: #16a34a;
+  --node-http-accent: #0891b2;
+  --node-if-accent: #7c3aed;
+  --node-delay-accent: #d97706;
+  --node-output-accent: #4f46e5;
+
+  color-scheme: light;
+}
+
+/* Global motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -19,18 +19,29 @@ import { createNodesRenderer } from "./ui/renderers/node-renderer.js";
 
 import { attachNodeDrag } from "./interaction/node-drag.js";
 import { attachNodeSelection } from "./interaction/node-selection.js";
+import { attachNodeDelete } from "./interaction/node-delete.js";
 import { attachPan } from "./interaction/pan.js";
 import { attachZoom } from "./interaction/zoom.js";
 
 import { registerNode, getNodeDefinition } from "./nodes/registry.js";
 import { startNodeDefinition } from "./nodes/start-node.js";
+import { outputNodeDefinition } from "./nodes/output-node.js";
+import { httpNodeDefinition } from "./nodes/http-node.js";
+import { ifNodeDefinition } from "./nodes/if-node.js";
+import { delayNodeDefinition } from "./nodes/delay-node.js";
+
 import { createNode } from "./graph/node-factory.js";
 import { addNode } from "./graph/graph.js";
+import { AddNodeCommand } from "./history/commands/add-node-command.js";
 
 import { el } from "./utils/dom.js";
 
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
+registerNode(outputNodeDefinition);
+registerNode(httpNodeDefinition);
+registerNode(ifNodeDefinition);
+registerNode(delayNodeDefinition);
 
 /* ---------- 2. Store ---------- */
 const store = createStore(createInitialState());
@@ -44,20 +55,56 @@ const history = createHistory(store);
 /* ---------- 5. Camera ---------- */
 const camera = createCamera(store);
 
-/* ---------- 6. Layout ---------- */
+/* ---------- 6. Helpers ---------- */
+
+/**
+ * Compute a spawn position for a new node.
+ * Center of the viewport, with a small cascade offset based on
+ * how many nodes already exist — avoids stacking new nodes
+ * exactly on top of each other.
+ */
+function computeSpawnPosition(workspaceEl, nodeCount) {
+  const rect = workspaceEl.getBoundingClientRect();
+  const { x, y, zoom } = camera.get();
+
+  const worldCenterX = (rect.width / 2 - x) / zoom;
+  const worldCenterY = (rect.height / 2 - y) / zoom;
+
+  const step = 28; // cascade offset
+  const cascade = (nodeCount % 6) * step;
+
+  return {
+    x: Math.round(worldCenterX - 110 + cascade),
+    y: Math.round(worldCenterY - 40 + cascade),
+  };
+}
+
+/* ---------- 7. Layout ---------- */
+
 const app = document.getElementById("app");
 const middle = el("div", { class: "flex-1 flex min-h-0" });
 
-const leftSidebar = createLeftSidebar();
 const { root: workspaceRoot, viewport, nodesLayer } = createWorkspace();
-const rightSidebar = createRightSidebar(store);
 
+function handleAddNode(definition) {
+  const { workflow } = store.getState();
+  const position = computeSpawnPosition(workspaceRoot, workflow.nodes.length);
+  const node = createNode(definition, position);
+  history.push(new AddNodeCommand(node));
+  store.setState({
+    selection: { nodeIds: [node.id], edgeIds: [] },
+  });
+}
+
+const leftSidebar = createLeftSidebar({ onAddNode: handleAddNode });
+const rightSidebar = createRightSidebar(store);
 const topBar = createTopBar(store, { camera, workspaceEl: workspaceRoot });
 
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
-/* ---------- 7. Renderers ---------- */
+/* ---------- 8. Renderers ---------- */
+
 const renderViewport = createViewportRenderer(viewport);
 const renderGrid = createGridRenderer(workspaceRoot);
 const renderNodes = createNodesRenderer(nodesLayer);
@@ -70,17 +117,18 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
-/* ---------- 8. Interactions ---------- */
+/* ---------- 9. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachNodeDrag({ workspaceEl: workspaceRoot, store, history, camera });
+attachNodeDelete({ store, history });
 attachPan({ workspaceEl: workspaceRoot, camera, store });
 attachZoom({ workspaceEl: workspaceRoot, camera });
 
-/* ---------- 9. Seed initial graph ---------- */
+/* ---------- 10. Seed initial graph ---------- */
 {
-  const def = getNodeDefinition("start");
-  if (def) {
-    const startNode = createNode(def, { x: 320, y: 220 });
+  const startDef = getNodeDefinition("start");
+  if (startDef) {
+    const startNode = createNode(startDef, { x: 320, y: 220 });
     const { workflow } = store.getState();
     store.setState({
       workflow: {
@@ -91,10 +139,10 @@ attachZoom({ workspaceEl: workspaceRoot, camera });
   }
 }
 
-/* ---------- 10. First paint ---------- */
+/* ---------- 11. First paint ---------- */
 renderAll(store.getState());
 
-/* ---------- 11. Dev helpers ---------- */
+/* ---------- 12. Dev helpers ---------- */
 if (import.meta?.url) {
   window.__poyberflow = { store, history, camera };
 }

@@ -78,3 +78,43 @@ body {
 .nodes-layer > * {
   pointer-events: auto;
 }
+
+/* ============================================================
+   Handles
+   ============================================================ */
+
+.handle-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-bg-surface);
+  border: 2px solid var(--handle-color, var(--color-border-strong));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.handle-dot:hover {
+  background: var(--handle-color, var(--color-brand));
+  transform-origin: center;
+  /* Keep the translate(-50%, -50%) / (50%, -50%) offset intact.
+     Only bump scale via box-shadow ring — safer than overriding
+     the inline transform. */
+  box-shadow:
+    0 0 0 4px
+      color-mix(
+        in srgb,
+        var(--handle-color, var(--color-brand)) 22%,
+        transparent
+      ),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Give the node a bit of visual breathing room for the handles */
+[data-node-id] > div {
+  /* no-op, kept as a hook if needed later */
+}

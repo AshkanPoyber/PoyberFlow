@@ -1,37 +1,11 @@
 /* ============================================================
-   Left Sidebar — Node library shell.
-
-   Release 0: visually complete placeholder.
-   Node list is added in Release 2.
+   Left Sidebar — hosts the Node Library.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
+import { createNodeLibrary } from "../panels/node-library.js";
 
-function placeholderGroup(title) {
-  return el("div", { class: "px-3 py-2" }, [
-    el(
-      "div",
-      {
-        class:
-          "text-[11px] font-medium uppercase tracking-wider text-muted mb-2 px-1",
-      },
-      title,
-    ),
-    el(
-      "div",
-      {
-        class:
-          "flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border text-[12px] text-muted",
-      },
-      [
-        el("i", { class: "fa-regular fa-circle text-[10px]" }),
-        el("span", {}, "Coming soon"),
-      ],
-    ),
-  ]);
-}
-
-export function createLeftSidebar() {
+export function createLeftSidebar({ onAddNode }) {
   const header = el(
     "div",
     {
@@ -41,11 +15,8 @@ export function createLeftSidebar() {
     "Nodes",
   );
 
-  const body = el("div", { class: "flex-1 overflow-y-auto py-2" }, [
-    placeholderGroup("Core"),
-    placeholderGroup("Logic"),
-    placeholderGroup("Network"),
-    placeholderGroup("Utility"),
+  const body = el("div", { class: "flex-1 overflow-y-auto" }, [
+    createNodeLibrary({ onAdd: onAddNode }),
   ]);
 
   return el(

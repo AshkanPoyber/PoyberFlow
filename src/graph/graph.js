@@ -22,3 +22,13 @@ export function findNode(nodes, nodeId) {
 export function moveNode(nodes, nodeId, position) {
   return updateNode(nodes, nodeId, { position });
 }
+
+/* ---------- Edge helpers are in edge.js ---------- */
+export {
+  addEdge,
+  removeEdge,
+  findEdge,
+  removeEdgesForNode,
+  edgesForNode,
+  edgeExists,
+} from "./edge.js";

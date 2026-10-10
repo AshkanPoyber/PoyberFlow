@@ -16,10 +16,13 @@ import { createWorkspace } from "./ui/layout/workspace.js";
 import { createViewportRenderer } from "./ui/renderers/viewport-renderer.js";
 import { createGridRenderer } from "./ui/renderers/grid-renderer.js";
 import { createNodesRenderer } from "./ui/renderers/node-renderer.js";
+import { createEdgesRenderer } from "./ui/renderers/edges-renderer.js";
 
 import { attachNodeDrag } from "./interaction/node-drag.js";
 import { attachNodeSelection } from "./interaction/node-selection.js";
 import { attachNodeDelete } from "./interaction/node-delete.js";
+import { attachEdgeSelection } from "./interaction/edge-selection.js";
+import { attachConnectionDrag } from "./interaction/connection-drag.js";
 import { attachPan } from "./interaction/pan.js";
 import { attachZoom } from "./interaction/zoom.js";
 
@@ -57,12 +60,6 @@ const camera = createCamera(store);
 
 /* ---------- 6. Helpers ---------- */
 
-/**
- * Compute a spawn position for a new node.
- * Center of the viewport, with a small cascade offset based on
- * how many nodes already exist — avoids stacking new nodes
- * exactly on top of each other.
- */
 function computeSpawnPosition(workspaceEl, nodeCount) {
   const rect = workspaceEl.getBoundingClientRect();
   const { x, y, zoom } = camera.get();
@@ -70,7 +67,7 @@ function computeSpawnPosition(workspaceEl, nodeCount) {
   const worldCenterX = (rect.width / 2 - x) / zoom;
   const worldCenterY = (rect.height / 2 - y) / zoom;
 
-  const step = 28; // cascade offset
+  const step = 28;
   const cascade = (nodeCount % 6) * step;
 
   return {
@@ -84,7 +81,12 @@ function computeSpawnPosition(workspaceEl, nodeCount) {
 const app = document.getElementById("app");
 const middle = el("div", { class: "flex-1 flex min-h-0" });
 
-const { root: workspaceRoot, viewport, nodesLayer } = createWorkspace();
+const {
+  root: workspaceRoot,
+  viewport,
+  edgesLayer,
+  nodesLayer,
+} = createWorkspace();
 
 function handleAddNode(definition) {
   const { workflow } = store.getState();
@@ -105,24 +107,37 @@ app.append(topBar, middle);
 
 /* ---------- 8. Renderers ---------- */
 
+// We need a shared reference so the edges renderer can measure node cards.
+const nodeElementsRef = { current: new Map() };
+
 const renderViewport = createViewportRenderer(viewport);
 const renderGrid = createGridRenderer(workspaceRoot);
-const renderNodes = createNodesRenderer(nodesLayer);
+const renderNodes = createNodesRenderer(nodesLayer, nodeElementsRef);
+const renderEdges = createEdgesRenderer(edgesLayer, nodeElementsRef);
 
 function renderAll(state) {
   renderViewport(state);
   renderGrid(state);
   renderNodes(state);
+  renderEdges(state);
 }
 
 store.subscribe(renderAll);
 
 /* ---------- 9. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
+attachEdgeSelection({ workspaceEl: workspaceRoot, store });
 attachNodeDrag({ workspaceEl: workspaceRoot, store, history, camera });
 attachNodeDelete({ store, history });
 attachPan({ workspaceEl: workspaceRoot, camera, store });
 attachZoom({ workspaceEl: workspaceRoot, camera });
+attachConnectionDrag({
+  workspaceEl: workspaceRoot,
+  viewportEl: viewport,
+  edgesLayerEl: edgesLayer,
+  store,
+  history,
+});
 
 /* ---------- 10. Seed initial graph ---------- */
 {

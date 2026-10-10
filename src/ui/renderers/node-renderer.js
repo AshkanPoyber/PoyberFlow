@@ -199,7 +199,7 @@ export function createNodeElement(node) {
 
 /* ---------- Nodes layer reconciler ---------- */
 
-export function createNodesRenderer(nodesLayer) {
+export function createNodesRenderer(nodesLayer, nodeElementsRef) {
   const elements = new Map(); // nodeId -> element
 
   return function render(state) {
@@ -214,7 +214,9 @@ export function createNodesRenderer(nodesLayer) {
       if (!nodeEl) {
         nodeEl = createNodeElement(node);
         elements.set(node.id, nodeEl);
+        if (nodeElementsRef) nodeElementsRef.current = elements;
         nodesLayer.appendChild(nodeEl);
+        if (nodeElementsRef) nodeElementsRef.current = elements;
       } else {
         nodeEl.style.left = `${node.position.x}px`;
         nodeEl.style.top = `${node.position.y}px`;

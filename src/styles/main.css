@@ -118,3 +118,71 @@ body {
 [data-node-id] > div {
   /* no-op, kept as a hook if needed later */
 }
+
+/* ============================================================
+   Edges
+   ============================================================ */
+
+.edges-layer {
+  overflow: visible;
+}
+
+/* Nodes and their handles are interactive; edges are hit-testable. */
+.edges-layer path {
+  pointer-events: none;
+}
+.edges-layer g[data-edge-id] {
+  pointer-events: auto;
+}
+.edges-layer g[data-edge-id] .edge-hitbox {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.edge-visible {
+  transition:
+    stroke-width 120ms ease,
+    opacity 120ms ease,
+    filter 120ms ease;
+}
+
+.edges-layer g[data-edge-id]:hover .edge-visible {
+  stroke-width: 3;
+  opacity: 1;
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--color-brand) 40%, transparent)
+  );
+}
+
+.edges-layer g.is-selected .edge-visible {
+  stroke-width: 3;
+  opacity: 1;
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--color-brand) 55%, transparent)
+  );
+}
+
+/* Live connection path */
+.edge-live {
+  pointer-events: none;
+  animation: dash-flow 0.6s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Handle targets during connection drag */
+.handle-dot.is-connect-target {
+  background: var(--handle-color, var(--color-brand)) !important;
+  box-shadow:
+    0 0 0 5px
+      color-mix(
+        in srgb,
+        var(--handle-color, var(--color-brand)) 30%,
+        transparent
+      ),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}

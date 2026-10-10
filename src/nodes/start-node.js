@@ -1,12 +1,7 @@
 /* ============================================================
    Start Node — entry point of every workflow.
-
-   Release 0: only `renderBody` is used. The other hooks
-   (renderConfig, validate, execute) are placeholders that
-   will be filled in during later releases.
    ============================================================ */
 
-import { el } from "../utils/dom.js";
 import { NODE_TYPES } from "../core/constants.js";
 
 export const startNodeDefinition = {
@@ -22,10 +17,8 @@ export const startNodeDefinition = {
 
   defaultData: () => ({}),
 
-  renderBody(node, bodyEl) {
-    bodyEl.appendChild(
-      el("div", { class: "node-body-text" }, "Workflow begins here"),
-    );
+  getBodyPreview() {
+    return "Workflow begins here";
   },
 
   renderConfig(/* node, container, onChange */) {

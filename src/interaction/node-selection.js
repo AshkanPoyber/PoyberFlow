@@ -2,9 +2,9 @@
    Node Selection Interaction
 
    Rules:
-   - Clicking a node selects it (single-select in Release 0).
+   - Clicking a node selects it (single-select in Release 2).
    - Clicking empty workspace clears selection.
-   - Selection is stored in state, never in DOM classes only.
+   - Pressing Escape clears selection.
    ============================================================ */
 
 export function attachNodeSelection({ workspaceEl, store }) {
@@ -15,7 +15,7 @@ export function attachNodeSelection({ workspaceEl, store }) {
       const nodeId = nodeEl.dataset.nodeId;
       const { selection } = store.getState();
       if (selection.nodeIds.length === 1 && selection.nodeIds[0] === nodeId) {
-        return; // already selected
+        return;
       }
       store.setState({
         selection: { nodeIds: [nodeId], edgeIds: [] },
@@ -23,7 +23,23 @@ export function attachNodeSelection({ workspaceEl, store }) {
       return;
     }
 
-    // Clicked on empty workspace
+    const { selection } = store.getState();
+    if (selection.nodeIds.length === 0 && selection.edgeIds.length === 0)
+      return;
+    store.setState({ selection: { nodeIds: [], edgeIds: [] } });
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+
+    const t = event.target;
+    const typing =
+      t instanceof HTMLElement &&
+      (t.tagName === "INPUT" ||
+        t.tagName === "TEXTAREA" ||
+        t.isContentEditable);
+    if (typing) return;
+
     const { selection } = store.getState();
     if (selection.nodeIds.length === 0 && selection.edgeIds.length === 0)
       return;

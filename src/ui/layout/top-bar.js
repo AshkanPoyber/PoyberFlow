@@ -1,11 +1,12 @@
 /* ============================================================
-   Top Bar — logo, workflow name, theme toggle.
+   Top Bar — logo, workflow name, zoom controls, theme toggle.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
 import { toggleTheme } from "../theme/theme-manager.js";
+import { createZoomControls } from "./zoom-controls.js";
 
-export function createTopBar(store) {
+export function createTopBar(store, { camera, workspaceEl }) {
   const logo = el("div", { class: "flex items-center gap-2.5" }, [
     el(
       "div",
@@ -17,9 +18,7 @@ export function createTopBar(store) {
     ),
     el(
       "span",
-      {
-        class: "text-[15px] font-semibold tracking-tight text-primary",
-      },
+      { class: "text-[15px] font-semibold tracking-tight text-primary" },
       "PoyberFlow",
     ),
   ]);
@@ -36,6 +35,8 @@ export function createTopBar(store) {
     ],
   );
 
+  const zoomControls = createZoomControls({ store, camera, workspaceEl });
+
   const themeBtn = el(
     "button",
     {
@@ -48,7 +49,6 @@ export function createTopBar(store) {
     [el("i", { class: "fa-solid fa-moon text-sm" })],
   );
 
-  // Update icon based on current theme
   store.subscribe((state) => {
     const isDark = state.ui.theme === "dark";
     const icon = themeBtn.querySelector("i");
@@ -66,7 +66,7 @@ export function createTopBar(store) {
     },
     [
       el("div", { class: "flex items-center gap-4" }, [logo, workflowName]),
-      themeBtn,
+      el("div", { class: "flex items-center gap-4" }, [zoomControls, themeBtn]),
     ],
   );
 }

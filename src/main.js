@@ -1,18 +1,11 @@
 /* ============================================================
    PoyberFlow — entry point.
-
-   Wires together:
-   - state
-   - theme
-   - layout
-   - renderers
-   - interactions
-   - history
    ============================================================ */
 
 import { createStore } from "./core/store.js";
 import { createInitialState } from "./state/initial-state.js";
 import { createHistory } from "./history/history.js";
+import { createCamera } from "./core/camera.js";
 
 import { initTheme } from "./ui/theme/theme-manager.js";
 import { createTopBar } from "./ui/layout/top-bar.js";
@@ -26,11 +19,12 @@ import { createNodesRenderer } from "./ui/renderers/node-renderer.js";
 
 import { attachNodeDrag } from "./interaction/node-drag.js";
 import { attachNodeSelection } from "./interaction/node-selection.js";
+import { attachPan } from "./interaction/pan.js";
+import { attachZoom } from "./interaction/zoom.js";
 
 import { registerNode, getNodeDefinition } from "./nodes/registry.js";
 import { startNodeDefinition } from "./nodes/start-node.js";
 import { createNode } from "./graph/node-factory.js";
-
 import { addNode } from "./graph/graph.js";
 
 import { el } from "./utils/dom.js";
@@ -47,20 +41,23 @@ initTheme(store);
 /* ---------- 4. History ---------- */
 const history = createHistory(store);
 
-/* ---------- 5. Layout ---------- */
-const app = document.getElementById("app");
+/* ---------- 5. Camera ---------- */
+const camera = createCamera(store);
 
-const topBar = createTopBar(store);
+/* ---------- 6. Layout ---------- */
+const app = document.getElementById("app");
 const middle = el("div", { class: "flex-1 flex min-h-0" });
 
 const leftSidebar = createLeftSidebar();
 const { root: workspaceRoot, viewport, nodesLayer } = createWorkspace();
 const rightSidebar = createRightSidebar(store);
 
+const topBar = createTopBar(store, { camera, workspaceEl: workspaceRoot });
+
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
-/* ---------- 6. Renderers ---------- */
+/* ---------- 7. Renderers ---------- */
 const renderViewport = createViewportRenderer(viewport);
 const renderGrid = createGridRenderer(workspaceRoot);
 const renderNodes = createNodesRenderer(nodesLayer);
@@ -73,11 +70,13 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
-/* ---------- 7. Interactions ---------- */
+/* ---------- 8. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
-attachNodeDrag({ workspaceEl: workspaceRoot, store, history });
+attachNodeDrag({ workspaceEl: workspaceRoot, store, history, camera });
+attachPan({ workspaceEl: workspaceRoot, camera, store });
+attachZoom({ workspaceEl: workspaceRoot, camera });
 
-/* ---------- 8. Seed initial graph ---------- */
+/* ---------- 9. Seed initial graph ---------- */
 {
   const def = getNodeDefinition("start");
   if (def) {
@@ -92,10 +91,10 @@ attachNodeDrag({ workspaceEl: workspaceRoot, store, history });
   }
 }
 
-/* ---------- 9. First paint ---------- */
+/* ---------- 10. First paint ---------- */
 renderAll(store.getState());
 
-/* ---------- 10. Debug helpers (dev only) ---------- */
+/* ---------- 11. Dev helpers ---------- */
 if (import.meta?.url) {
-  window.__poyberflow = { store, history };
+  window.__poyberflow = { store, history, camera };
 }

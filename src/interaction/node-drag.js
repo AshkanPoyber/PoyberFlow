@@ -1,36 +1,40 @@
 /* ============================================================
    Node Drag Interaction
 
-   Design:
-   - During drag: mutate DOM directly for smoothness (no state writes).
-   - On release: emit a single MoveNodeCommand so history stays clean.
-   - The Interaction layer never calls store.setState directly.
+   Changes in R1:
+   - Uses camera.screenDeltaToWorldDelta() so dragging is
+     correct at any zoom level.
+   - No direct state writes during the drag; only one Command
+     is committed on release.
    ============================================================ */
 
 import { MoveNodeCommand } from "../history/commands/move-node-command.js";
 import { findNode } from "../graph/graph.js";
 
-export function attachNodeDrag({ workspaceEl, store, history }) {
+export function attachNodeDrag({ workspaceEl, store, history, camera }) {
   let drag = null;
 
   workspaceEl.addEventListener("pointerdown", (event) => {
+    // Ignore when the user is panning with space/middle-mouse.
+    if (event.button !== 0) return;
+    if (workspaceEl.style.cursor === "grab") return;
+    if (workspaceEl.style.cursor === "grabbing") return;
+
     const nodeEl = event.target.closest("[data-node-id]");
     if (!nodeEl) return;
-    if (event.button !== 0) return;
 
     const nodeId = nodeEl.dataset.nodeId;
     const node = findNode(store.getState().workflow.nodes, nodeId);
     if (!node) return;
 
-    const start = { x: event.clientX, y: event.clientY };
-    const origin = { ...node.position };
-
     drag = {
       nodeId,
       nodeEl,
-      start,
-      origin,
+      startX: event.clientX,
+      startY: event.clientY,
+      origin: { ...node.position },
       moved: false,
+      pointerId: event.pointerId,
     };
 
     nodeEl.style.cursor = "grabbing";
@@ -39,46 +43,43 @@ export function attachNodeDrag({ workspaceEl, store, history }) {
   });
 
   window.addEventListener("pointermove", (event) => {
-    if (!drag) return;
+    if (!drag || event.pointerId !== drag.pointerId) return;
 
-    const dx = event.clientX - drag.start.x;
-    const dy = event.clientY - drag.start.y;
+    const dxScreen = event.clientX - drag.startX;
+    const dyScreen = event.clientY - drag.startY;
 
-    if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    if (!drag.moved && Math.hypot(dxScreen, dyScreen) < 3) return;
     drag.moved = true;
 
-    const nextX = drag.origin.x + dx;
-    const nextY = drag.origin.y + dy;
+    // Screen delta → world delta via the camera.
+    const { dx, dy } = camera.screenDeltaToWorldDelta(dxScreen, dyScreen);
 
-    // Direct DOM update for smoothness.
-    drag.nodeEl.style.left = `${nextX}px`;
-    drag.nodeEl.style.top = `${nextY}px`;
+    drag.nodeEl.style.left = `${drag.origin.x + dx}px`;
+    drag.nodeEl.style.top = `${drag.origin.y + dy}px`;
   });
 
-  window.addEventListener("pointerup", () => {
-    if (!drag) return;
+  function endDrag(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
 
-    const nodeEl = drag.nodeEl;
-    const nodeId = drag.nodeId;
-
+    const { nodeEl, nodeId, moved, origin } = drag;
     nodeEl.style.cursor = "grab";
 
-    if (!drag.moved) {
+    if (!moved) {
       drag = null;
       return;
     }
 
-    const finalX = parseFloat(nodeEl.style.left);
-    const finalY = parseFloat(nodeEl.style.top);
-
-    const from = { ...drag.origin };
-    const to = { x: finalX, y: finalY };
+    const to = {
+      x: parseFloat(nodeEl.style.left),
+      y: parseFloat(nodeEl.style.top),
+    };
 
     drag = null;
 
-    // Only commit if position actually changed.
-    if (from.x === to.x && from.y === to.y) return;
+    if (origin.x === to.x && origin.y === to.y) return;
+    history.push(new MoveNodeCommand(nodeId, origin, to));
+  }
 
-    history.push(new MoveNodeCommand(nodeId, from, to));
-  });
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
 }

@@ -1,21 +1,19 @@
 /* ============================================================
    Node Drag Interaction
 
-   Changes in R1:
-   - Uses camera.screenDeltaToWorldDelta() so dragging is
-     correct at any zoom level.
-   - No direct state writes during the drag; only one Command
-     is committed on release.
+   Changes in R4:
+   - Dragging a selected node drags the entire selection.
+   - Dragging an unselected node selects it first, then drags.
+   - Emits a single MoveNodesCommand on release.
    ============================================================ */
 
-import { MoveNodeCommand } from "../history/commands/move-node-command.js";
+import { MoveNodesCommand } from "../history/commands/move-nodes-command.js";
 import { findNode } from "../graph/graph.js";
 
 export function attachNodeDrag({ workspaceEl, store, history, camera }) {
   let drag = null;
 
   workspaceEl.addEventListener("pointerdown", (event) => {
-    // Ignore when the user is panning with space/middle-mouse.
     if (event.button !== 0) return;
     if (workspaceEl.style.cursor === "grab") return;
     if (workspaceEl.style.cursor === "grabbing") return;
@@ -24,20 +22,40 @@ export function attachNodeDrag({ workspaceEl, store, history, camera }) {
     if (!nodeEl) return;
 
     const nodeId = nodeEl.dataset.nodeId;
-    const node = findNode(store.getState().workflow.nodes, nodeId);
+    const { selection, workflow } = store.getState();
+    const node = findNode(workflow.nodes, nodeId);
     if (!node) return;
 
+    let selectedIds = selection.nodeIds;
+    if (!selectedIds.includes(nodeId)) {
+      selectedIds = [nodeId];
+      store.setState({ selection: { nodeIds: selectedIds, edgeIds: [] } });
+    }
+
+    const origins = new Map();
+    for (const id of selectedIds) {
+      const n = findNode(workflow.nodes, id);
+      if (n) origins.set(id, { ...n.position });
+    }
+
+    const nodeEls = new Map();
+    for (const id of selectedIds) {
+      const el = workspaceEl.querySelector(`[data-node-id="${id}"]`);
+      if (el) nodeEls.set(id, el);
+    }
+
     drag = {
-      nodeId,
-      nodeEl,
+      primaryId: nodeId,
+      selectedIds: [...selectedIds],
       startX: event.clientX,
       startY: event.clientY,
-      origin: { ...node.position },
+      origins,
+      nodeEls,
       moved: false,
       pointerId: event.pointerId,
     };
 
-    nodeEl.style.cursor = "grabbing";
+    for (const el of nodeEls.values()) el.style.cursor = "grabbing";
     nodeEl.setPointerCapture?.(event.pointerId);
     event.preventDefault();
   });
@@ -51,33 +69,52 @@ export function attachNodeDrag({ workspaceEl, store, history, camera }) {
     if (!drag.moved && Math.hypot(dxScreen, dyScreen) < 3) return;
     drag.moved = true;
 
-    // Screen delta → world delta via the camera.
     const { dx, dy } = camera.screenDeltaToWorldDelta(dxScreen, dyScreen);
 
-    drag.nodeEl.style.left = `${drag.origin.x + dx}px`;
-    drag.nodeEl.style.top = `${drag.origin.y + dy}px`;
+    for (const [id, el] of drag.nodeEls) {
+      const origin = drag.origins.get(id);
+      if (!origin) continue;
+      el.style.left = `${origin.x + dx}px`;
+      el.style.top = `${origin.y + dy}px`;
+    }
   });
 
   function endDrag(event) {
     if (!drag || event.pointerId !== drag.pointerId) return;
 
-    const { nodeEl, nodeId, moved, origin } = drag;
-    nodeEl.style.cursor = "grab";
+    const { nodeEls, moved, origins, selectedIds, primaryId } = drag;
+
+    for (const el of nodeEls.values()) el.style.cursor = "grab";
 
     if (!moved) {
+      // Clicked without dragging:
+      // If more than one node was selected and the user clicked
+      // on one of them, reduce the selection to just that node.
+      if (selectedIds.length > 1) {
+        store.setState({
+          selection: { nodeIds: [primaryId], edgeIds: [] },
+        });
+      }
       drag = null;
       return;
     }
 
-    const to = {
-      x: parseFloat(nodeEl.style.left),
-      y: parseFloat(nodeEl.style.top),
-    };
+    const moves = [];
+    for (const [id, el] of nodeEls) {
+      const origin = origins.get(id);
+      if (!origin) continue;
+      const to = {
+        x: parseFloat(el.style.left),
+        y: parseFloat(el.style.top),
+      };
+      if (origin.x === to.x && origin.y === to.y) continue;
+      moves.push({ id, from: origin, to });
+    }
 
     drag = null;
 
-    if (origin.x === to.x && origin.y === to.y) return;
-    history.push(new MoveNodeCommand(nodeId, origin, to));
+    if (moves.length === 0) return;
+    history.push(new MoveNodesCommand(moves));
   }
 
   window.addEventListener("pointerup", endDrag);

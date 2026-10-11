@@ -1,12 +1,13 @@
 /* ============================================================
-   Top Bar — logo, workflow name, zoom controls, theme toggle.
+   Top Bar — logo, workflow name, history, zoom, theme.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
 import { toggleTheme } from "../theme/theme-manager.js";
 import { createZoomControls } from "./zoom-controls.js";
+import { createHistoryControls } from "./history-controls.js";
 
-export function createTopBar(store, { camera, workspaceEl }) {
+export function createTopBar(store, { camera, workspaceEl, history }) {
   const logo = el("div", { class: "flex items-center gap-2.5" }, [
     el(
       "div",
@@ -35,6 +36,7 @@ export function createTopBar(store, { camera, workspaceEl }) {
     ],
   );
 
+  const historyControls = createHistoryControls({ history });
   const zoomControls = createZoomControls({ store, camera, workspaceEl });
 
   const themeBtn = el(
@@ -65,7 +67,12 @@ export function createTopBar(store, { camera, workspaceEl }) {
         "h-14 shrink-0 flex items-center justify-between px-4 border-b border-border bg-surface",
     },
     [
-      el("div", { class: "flex items-center gap-4" }, [logo, workflowName]),
+      el("div", { class: "flex items-center gap-4" }, [
+        logo,
+        workflowName,
+        el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-1" }),
+        historyControls,
+      ]),
       el("div", { class: "flex items-center gap-4" }, [zoomControls, themeBtn]),
     ],
   );

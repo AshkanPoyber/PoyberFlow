@@ -20,9 +20,10 @@ import { createEdgesRenderer } from "./ui/renderers/edges-renderer.js";
 
 import { attachNodeDrag } from "./interaction/node-drag.js";
 import { attachNodeSelection } from "./interaction/node-selection.js";
-import { attachNodeDelete } from "./interaction/node-delete.js";
 import { attachEdgeSelection } from "./interaction/edge-selection.js";
+import { attachRectangleSelection } from "./interaction/rectangle-selection.js";
 import { attachConnectionDrag } from "./interaction/connection-drag.js";
+import { attachKeyboardShortcuts } from "./interaction/keyboard-shortcuts.js";
 import { attachPan } from "./interaction/pan.js";
 import { attachZoom } from "./interaction/zoom.js";
 
@@ -100,14 +101,17 @@ function handleAddNode(definition) {
 
 const leftSidebar = createLeftSidebar({ onAddNode: handleAddNode });
 const rightSidebar = createRightSidebar(store);
-const topBar = createTopBar(store, { camera, workspaceEl: workspaceRoot });
+const topBar = createTopBar(store, {
+  camera,
+  workspaceEl: workspaceRoot,
+  history,
+});
 
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
 /* ---------- 8. Renderers ---------- */
 
-// We need a shared reference so the edges renderer can measure node cards.
 const nodeElementsRef = { current: new Map() };
 
 const renderViewport = createViewportRenderer(viewport);
@@ -127,8 +131,13 @@ store.subscribe(renderAll);
 /* ---------- 9. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachEdgeSelection({ workspaceEl: workspaceRoot, store });
+attachRectangleSelection({
+  workspaceEl: workspaceRoot,
+  viewportEl: viewport,
+  store,
+  camera,
+});
 attachNodeDrag({ workspaceEl: workspaceRoot, store, history, camera });
-attachNodeDelete({ store, history });
 attachPan({ workspaceEl: workspaceRoot, camera, store });
 attachZoom({ workspaceEl: workspaceRoot, camera });
 attachConnectionDrag({
@@ -138,6 +147,7 @@ attachConnectionDrag({
   store,
   history,
 });
+attachKeyboardShortcuts({ store, history });
 
 /* ---------- 10. Seed initial graph ---------- */
 {

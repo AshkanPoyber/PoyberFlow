@@ -36,5 +36,11 @@ export function createInitialState() {
     ui: {
       theme: "dark",
     },
+    validation: {
+      ok: true,
+      errors: [],
+      warnings: [],
+      issues: [],
+    },
   };
 }

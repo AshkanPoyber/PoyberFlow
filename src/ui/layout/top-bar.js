@@ -7,6 +7,7 @@ import { toggleTheme } from "../theme/theme-manager.js";
 import { createZoomControls } from "./zoom-controls.js";
 import { createHistoryControls } from "./history-controls.js";
 import { createWorkflowMenu } from "./workflow-menu.js";
+import { validateWorkflow } from "../../engine/validator.js";
 
 export function createTopBar(
   store,
@@ -45,6 +46,37 @@ export function createTopBar(
   );
 
   const workflowMenu = createWorkflowMenu({ store, toast, rootEl });
+
+  const runBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "focus-ring h-8 px-3 rounded-md flex items-center gap-1.5 border border-transparent bg-[var(--color-success)] text-white hover:opacity-90 transition-opacity text-[12px] font-medium",
+      title: "Run workflow",
+      onclick: () => {
+        const result = validateWorkflow(store.getState().workflow);
+        if (!result.ok) {
+          toast.show({
+            kind: "error",
+            text: `Cannot run: ${result.errors.length} error${
+              result.errors.length === 1 ? "" : "s"
+            } in the workflow.`,
+          });
+          return;
+        }
+        toast.show({
+          kind: "info",
+          text: "Execution engine arrives in Release 8.",
+        });
+      },
+    },
+    [
+      el("i", { class: "fa-solid fa-play text-[11px]" }),
+      el("span", { class: "hidden sm:inline" }, "Run"),
+    ],
+  );
+
   const historyControls = createHistoryControls({ history });
   const zoomControls = createZoomControls({ store, camera, workspaceEl });
 
@@ -90,6 +122,7 @@ export function createTopBar(
         workflowName,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         workflowMenu,
+        runBtn,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         historyControls,
       ]),

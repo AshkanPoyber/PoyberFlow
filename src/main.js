@@ -38,7 +38,12 @@ import { createNode } from "./graph/node-factory.js";
 import { addNode } from "./graph/graph.js";
 import { AddNodeCommand } from "./history/commands/add-node-command.js";
 
+import { loadActiveWorkflow } from "./storage/local.js";
+import { attachAutosave } from "./storage/autosave.js";
+import { createToastManager } from "./ui/panels/toast-manager.js";
+
 import { el } from "./utils/dom.js";
+import { CURRENT_VERSION } from "./storage/schema.js";
 
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
@@ -50,34 +55,57 @@ registerNode(delayNodeDefinition);
 /* ---------- 2. Store ---------- */
 const store = createStore(createInitialState());
 
-/* ---------- 3. Theme ---------- */
+/* ---------- 3. Restore from LocalStorage (if any) ---------- */
+{
+  const restored = loadActiveWorkflow();
+  if (restored.ok) {
+    const p = restored.payload;
+    const { workflow, viewport } = store.getState();
+    store.setState({
+      workflow: {
+        ...workflow,
+        metadata: {
+          ...workflow.metadata,
+          ...p.metadata,
+          version: CURRENT_VERSION,
+        },
+        nodes: p.workflow.nodes,
+        edges: p.workflow.edges,
+      },
+      viewport: {
+        x: p.viewport?.x ?? viewport.x,
+        y: p.viewport?.y ?? viewport.y,
+        zoom: p.viewport?.zoom ?? viewport.zoom,
+      },
+    });
+  }
+}
+
+/* ---------- 4. Theme ---------- */
 initTheme(store);
 
-/* ---------- 4. History ---------- */
+/* ---------- 5. History ---------- */
 const history = createHistory(store);
 
-/* ---------- 5. Camera ---------- */
+/* ---------- 6. Camera ---------- */
 const camera = createCamera(store);
 
-/* ---------- 6. Helpers ---------- */
+/* ---------- 7. Helpers ---------- */
 
 function computeSpawnPosition(workspaceEl, nodeCount) {
   const rect = workspaceEl.getBoundingClientRect();
   const { x, y, zoom } = camera.get();
-
   const worldCenterX = (rect.width / 2 - x) / zoom;
   const worldCenterY = (rect.height / 2 - y) / zoom;
-
   const step = 28;
   const cascade = (nodeCount % 6) * step;
-
   return {
     x: Math.round(worldCenterX - 110 + cascade),
     y: Math.round(worldCenterY - 40 + cascade),
   };
 }
 
-/* ---------- 7. Layout ---------- */
+/* ---------- 8. Layout ---------- */
 
 const app = document.getElementById("app");
 const middle = el("div", { class: "flex-1 flex min-h-0" });
@@ -88,6 +116,8 @@ const {
   edgesLayer,
   nodesLayer,
 } = createWorkspace();
+
+const toast = createToastManager(app);
 
 function handleAddNode(definition) {
   const { workflow } = store.getState();
@@ -105,12 +135,14 @@ const topBar = createTopBar(store, {
   camera,
   workspaceEl: workspaceRoot,
   history,
+  toast,
+  rootEl: app,
 });
 
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
-/* ---------- 8. Renderers ---------- */
+/* ---------- 9. Renderers ---------- */
 
 const nodeElementsRef = { current: new Map() };
 
@@ -128,7 +160,7 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
-/* ---------- 9. Interactions ---------- */
+/* ---------- 10. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachEdgeSelection({ workspaceEl: workspaceRoot, store });
 attachRectangleSelection({
@@ -149,25 +181,37 @@ attachConnectionDrag({
 });
 attachKeyboardShortcuts({ store, history });
 
-/* ---------- 10. Seed initial graph ---------- */
+/* ---------- 11. Auto-save ---------- */
+attachAutosave(store, {
+  onSaved: () => {
+    // Silent by default — no toast on every autosave.
+  },
+  onError: (err) => {
+    toast.show({ kind: "error", text: `Auto-save failed: ${err}` });
+  },
+});
+
+/* ---------- 12. Seed if empty ---------- */
 {
-  const startDef = getNodeDefinition("start");
-  if (startDef) {
-    const startNode = createNode(startDef, { x: 320, y: 220 });
-    const { workflow } = store.getState();
-    store.setState({
-      workflow: {
-        ...workflow,
-        nodes: addNode(workflow.nodes, startNode),
-      },
-    });
+  const { workflow } = store.getState();
+  if (workflow.nodes.length === 0) {
+    const startDef = getNodeDefinition("start");
+    if (startDef) {
+      const startNode = createNode(startDef, { x: 320, y: 220 });
+      store.setState({
+        workflow: {
+          ...workflow,
+          nodes: addNode(workflow.nodes, startNode),
+        },
+      });
+    }
   }
 }
 
-/* ---------- 11. First paint ---------- */
+/* ---------- 13. First paint ---------- */
 renderAll(store.getState());
 
-/* ---------- 12. Dev helpers ---------- */
+/* ---------- 14. Dev helpers ---------- */
 if (import.meta?.url) {
   window.__poyberflow = { store, history, camera };
 }

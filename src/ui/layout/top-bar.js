@@ -1,13 +1,17 @@
 /* ============================================================
-   Top Bar — logo, workflow name, history, zoom, theme.
+   Top Bar — logo, workflow name, menu, history, zoom, theme.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
 import { toggleTheme } from "../theme/theme-manager.js";
 import { createZoomControls } from "./zoom-controls.js";
 import { createHistoryControls } from "./history-controls.js";
+import { createWorkflowMenu } from "./workflow-menu.js";
 
-export function createTopBar(store, { camera, workspaceEl, history }) {
+export function createTopBar(
+  store,
+  { camera, workspaceEl, history, toast, rootEl },
+) {
   const logo = el("div", { class: "flex items-center gap-2.5" }, [
     el(
       "div",
@@ -32,10 +36,15 @@ export function createTopBar(store, { camera, workspaceEl, history }) {
     },
     [
       el("i", { class: "fa-regular fa-file-lines text-secondary text-xs" }),
-      el("span", { class: "text-[13px] text-secondary" }, "Untitled Workflow"),
+      el(
+        "span",
+        { class: "text-[13px] text-secondary", id: "workflow-name-label" },
+        "Untitled Workflow",
+      ),
     ],
   );
 
+  const workflowMenu = createWorkflowMenu({ store, toast, rootEl });
   const historyControls = createHistoryControls({ history });
   const zoomControls = createZoomControls({ store, camera, workspaceEl });
 
@@ -54,10 +63,19 @@ export function createTopBar(store, { camera, workspaceEl, history }) {
   store.subscribe((state) => {
     const isDark = state.ui.theme === "dark";
     const icon = themeBtn.querySelector("i");
-    if (!icon) return;
-    icon.className = isDark
-      ? "fa-solid fa-sun text-sm"
-      : "fa-solid fa-moon text-sm";
+    if (icon) {
+      icon.className = isDark
+        ? "fa-solid fa-sun text-sm"
+        : "fa-solid fa-moon text-sm";
+    }
+
+    // Keep the workflow name in sync with state.metadata
+    const nameEl = document.getElementById("workflow-name-label");
+    if (nameEl && state.workflow.metadata.name) {
+      if (nameEl.textContent !== state.workflow.metadata.name) {
+        nameEl.textContent = state.workflow.metadata.name;
+      }
+    }
   });
 
   return el(
@@ -67,10 +85,12 @@ export function createTopBar(store, { camera, workspaceEl, history }) {
         "h-14 shrink-0 flex items-center justify-between px-4 border-b border-border bg-surface",
     },
     [
-      el("div", { class: "flex items-center gap-4" }, [
+      el("div", { class: "flex items-center gap-3" }, [
         logo,
         workflowName,
-        el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-1" }),
+        el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
+        workflowMenu,
+        el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         historyControls,
       ]),
       el("div", { class: "flex items-center gap-4" }, [zoomControls, themeBtn]),

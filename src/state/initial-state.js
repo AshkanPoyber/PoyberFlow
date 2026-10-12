@@ -1,21 +1,20 @@
 /* ============================================================
    Initial application state.
-
-   Note the strict separation:
-   - workflow : pure graph data (safe for history / persistence)
-   - runtime  : execution-time data (never persisted, never undone)
-   - viewport : camera
-   - selection: UI-level selection
-   - ui       : chrome (theme, panels)
    ============================================================ */
 
+import { createNodeId } from "../utils/id.js";
+
 export function createInitialState() {
+  const id = "workflow-" + createNodeId().split("-").slice(1).join("-");
+
   return {
     workflow: {
       metadata: {
-        id: "workflow-untitled",
+        id,
         name: "Untitled Workflow",
         version: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       nodes: [],
       edges: [],

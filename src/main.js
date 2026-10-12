@@ -45,6 +45,10 @@ import { createToastManager } from "./ui/panels/toast-manager.js";
 import { el } from "./utils/dom.js";
 import { CURRENT_VERSION } from "./storage/schema.js";
 
+import { attachValidation } from "./state/validation-state.js";
+import { createValidationBanner } from "./ui/panels/validation-banner.js";
+import { focusIssue } from "./interaction/validation-focus.js";
+
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
 registerNode(outputNodeDefinition);
@@ -160,6 +164,13 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
+const validationBanner = createValidationBanner({
+  store,
+  onFocusIssue: (issue) =>
+    focusIssue({ store, camera, workspaceEl: workspaceRoot }, issue),
+});
+workspaceRoot.appendChild(validationBanner);
+
 /* ---------- 10. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachEdgeSelection({ workspaceEl: workspaceRoot, store });
@@ -180,6 +191,7 @@ attachConnectionDrag({
   history,
 });
 attachKeyboardShortcuts({ store, history });
+const validationController = attachValidation(store);
 
 /* ---------- 11. Auto-save ---------- */
 attachAutosave(store, {

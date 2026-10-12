@@ -194,6 +194,16 @@ export function createNodeElement(node) {
 
   root.appendChild(card);
 
+  // Error badge — populated by the render loop.
+  const badge = el("div", {
+    class: "node-badge",
+    "aria-hidden": "true",
+  });
+  badge.appendChild(
+    el("i", { class: "fa-solid fa-circle-exclamation text-[9px]" }),
+  );
+  root.appendChild(badge);
+
   return root;
 }
 
@@ -226,6 +236,20 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
       const isSelected = selected.has(node.id);
       card.classList.toggle("shadow-node-selected", isSelected);
       card.classList.toggle("shadow-node", !isSelected);
+
+      // Error badge visibility (driven by validation state)
+      const hasError = (state.validation?.errors || []).some(
+        (i) => i.nodeId === node.id,
+      );
+      const hasWarning = (state.validation?.warnings || []).some(
+        (i) => i.nodeId === node.id,
+      );
+      const badgeEl = nodeEl.querySelector(".node-badge");
+      if (badgeEl) {
+        badgeEl.classList.toggle("is-visible", hasError || hasWarning);
+        badgeEl.classList.toggle("is-error", hasError);
+        badgeEl.classList.toggle("is-warning", !hasError && hasWarning);
+      }
     }
 
     for (const [id, nodeEl] of elements) {

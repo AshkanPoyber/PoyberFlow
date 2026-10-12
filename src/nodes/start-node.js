@@ -1,8 +1,10 @@
 /* ============================================================
-   Start Node — entry point of every workflow.
+   Start Node
    ============================================================ */
 
 import { NODE_TYPES } from "../core/constants.js";
+import { Field, TextareaInput } from "../ui/panels/forms/index.js";
+import { el } from "../utils/dom.js";
 
 export const startNodeDefinition = {
   type: NODE_TYPES.START,
@@ -15,22 +17,34 @@ export const startNodeDefinition = {
   inputs: [],
   outputs: [{ id: "out", label: "Out" }],
 
-  defaultData: () => ({}),
+  defaultData: () => ({
+    note: "",
+  }),
 
-  getBodyPreview() {
-    return "Workflow begins here";
+  getBodyPreview(node) {
+    return node?.data?.note?.trim() || "Workflow begins here";
   },
 
-  renderConfig(/* node, container, onChange */) {
-    // Release 6
+  renderConfig(node, container, onChange) {
+    container.appendChild(
+      Field({
+        label: "Note",
+        control: TextareaInput({
+          value: node.data.note || "",
+          placeholder: "Optional note for this entry point",
+          rows: 3,
+          onCommit: (value) => onChange({ note: value }),
+        }),
+        helper: "Shown on the node preview.",
+      }),
+    );
   },
 
-  validate(/* node */) {
+  validate() {
     return null;
   },
 
-  async execute(/* node, context */) {
-    // Release 8
+  async execute() {
     return { output: "out", data: null };
   },
 };

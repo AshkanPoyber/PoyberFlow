@@ -1,11 +1,9 @@
 /* ============================================================
-   IF Node — conditional branching.
-
-   Two outputs: `true` and `false`.
-   Release 2: visual only. Execution arrives in R8.
+   IF Node
    ============================================================ */
 
 import { NODE_TYPES } from "../core/constants.js";
+import { Field, TextInput } from "../ui/panels/forms/index.js";
 
 export const ifNodeDefinition = {
   type: NODE_TYPES.IF,
@@ -34,8 +32,22 @@ export const ifNodeDefinition = {
     };
   },
 
-  renderConfig(/* node, container, onChange */) {
-    // Release 6
+  renderConfig(node, container, onChange) {
+    container.appendChild(
+      Field({
+        label: "Condition",
+        required: true,
+        control: TextInput({
+          value: node.data.condition || "",
+          placeholder: "user.age >= 18",
+          monospace: true,
+          onCommit: (value) => onChange({ condition: value }),
+        }),
+        error: !node.data.condition?.trim() ? "Condition is required" : null,
+        helper:
+          "Simple expression — full evaluator arrives in a later release.",
+      }),
+    );
   },
 
   validate(node) {
@@ -43,8 +55,7 @@ export const ifNodeDefinition = {
     return null;
   },
 
-  async execute(/* node, context */) {
-    // Release 8
+  async execute() {
     return { output: "true", data: null };
   },
 };

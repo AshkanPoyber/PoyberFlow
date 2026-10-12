@@ -130,7 +130,7 @@ function handleAddNode(definition) {
 }
 
 const leftSidebar = createLeftSidebar({ onAddNode: handleAddNode });
-const rightSidebar = createRightSidebar(store);
+const rightSidebar = createRightSidebar({ store, history });
 const topBar = createTopBar(store, {
   camera,
   workspaceEl: workspaceRoot,

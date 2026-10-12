@@ -1,8 +1,9 @@
 /* ============================================================
-   Output Node — final output of a workflow.
+   Output Node
    ============================================================ */
 
 import { NODE_TYPES } from "../core/constants.js";
+import { Field, TextInput } from "../ui/panels/forms/index.js";
 
 export const outputNodeDefinition = {
   type: NODE_TYPES.OUTPUT,
@@ -24,16 +25,25 @@ export const outputNodeDefinition = {
     return label ? label : "Returns final result";
   },
 
-  renderConfig(/* node, container, onChange */) {
-    // Release 6
+  renderConfig(node, container, onChange) {
+    container.appendChild(
+      Field({
+        label: "Output label",
+        control: TextInput({
+          value: node.data.label || "",
+          placeholder: "e.g. Success",
+          onCommit: (value) => onChange({ label: value }),
+        }),
+        helper: "A short label describing this output.",
+      }),
+    );
   },
 
-  validate(/* node */) {
+  validate() {
     return null;
   },
 
-  async execute(/* node, context */) {
-    // Release 8
+  async execute() {
     return { output: null, data: null };
   },
 };

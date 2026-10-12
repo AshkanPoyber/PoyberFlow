@@ -373,3 +373,220 @@ body {
 .modal-btn-primary:hover {
   background: var(--color-brand-hover);
 }
+
+/* ============================================================
+   Properties Panel
+   ============================================================ */
+
+.properties-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.properties-empty,
+.properties-multi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+.properties-empty-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.properties-empty-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.properties-empty-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+.properties-form {
+  padding: 14px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.properties-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.properties-header-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.properties-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.properties-header-desc {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.properties-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.properties-validation {
+  margin: 0 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  color: var(--color-warning);
+  font-size: 11.5px;
+}
+
+/* ---------- Form fields ---------- */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field.has-error .form-control {
+  border-color: var(--color-error);
+}
+
+.form-control {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 12.5px;
+  font-family: inherit;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+  outline: none;
+}
+
+.form-control::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-control:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.form-control:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+
+.form-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+textarea.form-control {
+  line-height: 1.45;
+}
+
+.form-helper {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.form-error {
+  font-size: 11px;
+  color: var(--color-error);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+/* ---------- Select ---------- */
+
+.select-wrap {
+  position: relative;
+}
+
+.form-select {
+  appearance: none;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.select-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+/* ---------- Danger button (multi-select) ---------- */
+
+.btn-danger-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
+  color: var(--color-error);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.btn-danger-soft:hover {
+  background: color-mix(in srgb, var(--color-error) 20%, transparent);
+}

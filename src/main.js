@@ -49,6 +49,8 @@ import { attachValidation } from "./state/validation-state.js";
 import { createValidationBanner } from "./ui/panels/validation-banner.js";
 import { focusIssue } from "./interaction/validation-focus.js";
 
+import { setMockMode, isMockMode } from "./engine/mock-fetcher.js";
+
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
 registerNode(outputNodeDefinition);
@@ -223,7 +225,22 @@ attachAutosave(store, {
 /* ---------- 13. First paint ---------- */
 renderAll(store.getState());
 
+/* ---------- Mock mode ---------- */
+{
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("mock") === "1") {
+    setMockMode(true);
+    console.info("[PoyberFlow] Mock mode enabled via ?mock=1");
+  }
+}
+
 /* ---------- 14. Dev helpers ---------- */
 if (import.meta?.url) {
-  window.__poyberflow = { store, history, camera };
+  window.__poyberflow = {
+    store,
+    history,
+    camera,
+    setMockMode,
+    isMockMode,
+  };
 }

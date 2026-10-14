@@ -250,6 +250,23 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
         badgeEl.classList.toggle("is-error", hasError);
         badgeEl.classList.toggle("is-warning", !hasError && hasWarning);
       }
+
+      // Runtime state badge (during and after execution)
+      const runtimeState = state.runtime?.nodeStates?.[node.id];
+      const runtimeClass = runtimeState?.status || null;
+      const cardEl = nodeEl.firstElementChild;
+      if (cardEl) {
+        cardEl.classList.remove(
+          "node-state-running",
+          "node-state-success",
+          "node-state-error",
+        );
+        if (runtimeClass === "running")
+          cardEl.classList.add("node-state-running");
+        if (runtimeClass === "success")
+          cardEl.classList.add("node-state-success");
+        if (runtimeClass === "error") cardEl.classList.add("node-state-error");
+      }
     }
 
     for (const [id, nodeEl] of elements) {

@@ -10,7 +10,10 @@ import {
   NumberInput,
   SelectInput,
 } from "../ui/panels/forms/index.js";
-import { el } from "../utils/dom.js";
+import { performHttpRequest } from "../engine/http-fetcher.js";
+import { mockFetch, isMockMode } from "../engine/mock-fetcher.js";
+import { interpolateString } from "../engine/expression.js";
+import { NetworkError } from "../engine/errors.js";
 
 export const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
@@ -46,30 +49,31 @@ export const httpNodeDefinition = {
   },
 
   renderConfig(node, container, onChange) {
-    // Method + URL on the same row for compactness.
-    const methodField = Field({
-      label: "Method",
-      control: SelectInput({
-        value: node.data.method || "GET",
-        options: HTTP_METHODS.map((m) => ({ value: m, label: m })),
-        onChange: (value) => onChange({ method: value }),
+    container.appendChild(
+      Field({
+        label: "Method",
+        control: SelectInput({
+          value: node.data.method || "GET",
+          options: HTTP_METHODS.map((m) => ({ value: m, label: m })),
+          onChange: (value) => onChange({ method: value }),
+        }),
       }),
-    });
+    );
 
-    const urlField = Field({
-      label: "URL",
-      required: true,
-      control: TextInput({
-        value: node.data.url || "",
-        placeholder: "https://api.example.com/users",
-        monospace: true,
-        onCommit: (value) => onChange({ url: value }),
+    container.appendChild(
+      Field({
+        label: "URL",
+        required: true,
+        control: TextInput({
+          value: node.data.url || "",
+          placeholder: "https://api.example.com/users/{{vars.id}}",
+          monospace: true,
+          onCommit: (value) => onChange({ url: value }),
+        }),
+        error: !node.data.url?.trim() ? "URL is required" : null,
+        helper: "Supports {{nodeId.data.field}} interpolation.",
       }),
-      error: !node.data.url?.trim() ? "URL is required" : null,
-    });
-
-    container.appendChild(methodField);
-    container.appendChild(urlField);
+    );
 
     container.appendChild(
       Field({
@@ -132,7 +136,36 @@ export const httpNodeDefinition = {
     return null;
   },
 
-  async execute() {
-    return { output: "out", data: null };
+  async execute(node, context, { nodeIdByName }) {
+    const data = node.data || {};
+    const method = (data.method || "GET").toUpperCase();
+    const rawUrl = (data.url || "").trim();
+
+    if (!rawUrl) {
+      throw new NetworkError("URL is empty", { nodeId: node.id });
+    }
+
+    if (isMockMode()) {
+      const url = interpolateString(rawUrl, context, nodeIdByName);
+      const body = data.body
+        ? interpolateString(data.body, context, nodeIdByName)
+        : "";
+      const res = await mockFetch({
+        url,
+        method,
+        body,
+        abortSignal: context.abortSignal,
+      });
+      return { output: "out", data: res };
+    }
+
+    const res = await performHttpRequest({
+      node,
+      context,
+      nodeIdMap: nodeIdByName,
+      abortSignal: context.abortSignal,
+    });
+
+    return { output: "out", data: res };
   },
 };

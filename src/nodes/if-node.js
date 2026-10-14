@@ -4,6 +4,8 @@
 
 import { NODE_TYPES } from "../core/constants.js";
 import { Field, TextInput } from "../ui/panels/forms/index.js";
+import { evaluateExpression } from "../engine/expression.js";
+import { ExpressionError } from "../engine/errors.js";
 
 export const ifNodeDefinition = {
   type: NODE_TYPES.IF,
@@ -44,8 +46,7 @@ export const ifNodeDefinition = {
           onCommit: (value) => onChange({ condition: value }),
         }),
         error: !node.data.condition?.trim() ? "Condition is required" : null,
-        helper:
-          "Simple expression — full evaluator arrives in a later release.",
+        helper: "Supports comparisons and && / ||. Use {{nodeId.data.field}}.",
       }),
     );
   },
@@ -55,7 +56,24 @@ export const ifNodeDefinition = {
     return null;
   },
 
-  async execute() {
-    return { output: "true", data: null };
+  async execute(node, context, { nodeIdByName }) {
+    const source = node.data.condition?.trim();
+    if (!source) {
+      throw new ExpressionError("Condition is empty", { nodeId: node.id });
+    }
+
+    let result = false;
+    try {
+      result = evaluateExpression(source, context, nodeIdByName);
+    } catch (err) {
+      throw new ExpressionError(`Invalid condition: ${err.message}`, {
+        nodeId: node.id,
+      });
+    }
+
+    return {
+      output: result ? "true" : "false",
+      data: { result },
+    };
   },
 };

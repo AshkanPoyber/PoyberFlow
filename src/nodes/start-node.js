@@ -4,7 +4,6 @@
 
 import { NODE_TYPES } from "../core/constants.js";
 import { Field, TextareaInput } from "../ui/panels/forms/index.js";
-import { el } from "../utils/dom.js";
 
 export const startNodeDefinition = {
   type: NODE_TYPES.START,
@@ -45,6 +44,11 @@ export const startNodeDefinition = {
   },
 
   async execute() {
-    return { output: "out", data: null };
+    return {
+      output: "out",
+      data: {
+        startedAt: new Date().toISOString(),
+      },
+    };
   },
 };

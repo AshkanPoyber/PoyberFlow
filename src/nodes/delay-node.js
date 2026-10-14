@@ -4,6 +4,7 @@
 
 import { NODE_TYPES } from "../core/constants.js";
 import { Field, NumberInput } from "../ui/panels/forms/index.js";
+import { CancelledError } from "../engine/errors.js";
 
 export const delayNodeDefinition = {
   type: NODE_TYPES.DELAY,
@@ -53,7 +54,37 @@ export const delayNodeDefinition = {
     return null;
   },
 
-  async execute() {
-    return { output: "out", data: null };
+  async execute(node, context) {
+    const ms = Number(node.data.duration) || 0;
+
+    await sleep(ms, context.abortSignal);
+
+    return { output: "out", data: { waitedMs: ms } };
   },
 };
+
+function sleep(ms, abortSignal) {
+  return new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(new CancelledError("Delay cancelled"));
+      return;
+    }
+
+    const t = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    function onAbort() {
+      clearTimeout(t);
+      cleanup();
+      reject(new CancelledError("Delay cancelled"));
+    }
+
+    function cleanup() {
+      abortSignal?.removeEventListener("abort", onAbort);
+    }
+
+    abortSignal?.addEventListener("abort", onAbort);
+  });
+}

@@ -4,6 +4,7 @@
 
 import { NODE_TYPES } from "../core/constants.js";
 import { Field, TextInput } from "../ui/panels/forms/index.js";
+import { getLastResult } from "../engine/context.js";
 
 export const outputNodeDefinition = {
   type: NODE_TYPES.OUTPUT,
@@ -43,7 +44,14 @@ export const outputNodeDefinition = {
     return null;
   },
 
-  async execute() {
-    return { output: null, data: null };
+  async execute(node, context) {
+    const previous = getLastResult(context);
+    return {
+      output: null,
+      data: {
+        label: node.data.label || "Output",
+        value: previous?.data ?? null,
+      },
+    };
   },
 };

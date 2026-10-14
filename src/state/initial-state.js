@@ -21,6 +21,9 @@ export function createInitialState() {
     },
     runtime: {
       executing: false,
+      executionId: null,
+      startedAt: null,
+      finishedAt: null,
       nodeStates: {},
       logs: [],
     },

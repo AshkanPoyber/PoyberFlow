@@ -251,21 +251,25 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
         badgeEl.classList.toggle("is-warning", !hasError && hasWarning);
       }
 
-      // Runtime state badge (during and after execution)
+      // Runtime state (drives border color + pulse animation)
       const runtimeState = state.runtime?.nodeStates?.[node.id];
-      const runtimeClass = runtimeState?.status || null;
+      const runtimeStatus = runtimeState?.status || null;
+
       const cardEl = nodeEl.firstElementChild;
       if (cardEl) {
         cardEl.classList.remove(
           "node-state-running",
           "node-state-success",
           "node-state-error",
+          "node-state-skipped",
         );
-        if (runtimeClass === "running")
+        if (runtimeStatus === "running")
           cardEl.classList.add("node-state-running");
-        if (runtimeClass === "success")
+        if (runtimeStatus === "success")
           cardEl.classList.add("node-state-success");
-        if (runtimeClass === "error") cardEl.classList.add("node-state-error");
+        if (runtimeStatus === "error") cardEl.classList.add("node-state-error");
+        if (runtimeStatus === "skipped")
+          cardEl.classList.add("node-state-skipped");
       }
     }
 

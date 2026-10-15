@@ -1,19 +1,5 @@
 /* ============================================================
    Execution Engine — headless orchestrator.
-
-   Contract:
-   - Never touches the DOM.
-   - Reports progress via the provided callbacks.
-   - Uses AbortController for cancellation.
-   - Enforces MAX_STEPS to prevent runaway loops.
-
-   Flow:
-     validate → find start → loop:
-       mark running → execute → record result
-       → find outgoing edge for chosen output
-       → mark success → next node
-     on error: mark error, stop, report
-     on end:   mark success/finish
    ============================================================ */
 
 import { NODE_TYPES } from "../core/constants.js";
@@ -27,7 +13,9 @@ const MAX_STEPS = 1000;
 export async function executeWorkflow(workflow, options = {}) {
   const {
     onNodeStatus = () => {},
+    onEdgeStatus = () => {},
     onLog = () => {},
+    onResults = () => {},
     onFinish = () => {},
     abortSignal,
   } = options;
@@ -51,21 +39,24 @@ export async function executeWorkflow(workflow, options = {}) {
   const context = createExecutionContext(abortSignal);
   const nodeById = new Map(workflow.nodes.map((n) => [n.id, n]));
 
-  // Build the "path" map: nodeId → resolved id (for {{start...}} lookups)
   const nodeIdByName = new Map();
   const seenNames = new Set();
   for (const n of workflow.nodes) {
-    const def = getNodeDefinition(n.type);
-    if (!def) continue;
-    const name = n.type;
-    if (!seenNames.has(name)) {
-      nodeIdByName.set(name, n.id);
-      seenNames.add(name);
+    if (!seenNames.has(n.type)) {
+      nodeIdByName.set(n.type, n.id);
+      seenNames.add(n.type);
     }
   }
 
+  // Track reachable nodes so we can mark "skipped" after the run.
+  const visited = new Set();
+
   let current = startNode;
   let steps = 0;
+  let errorNodeId = null;
+  let errorEdgeId = null;
+
+  const startedAt = Date.now();
 
   onLog({
     level: "info",
@@ -92,6 +83,7 @@ export async function executeWorkflow(workflow, options = {}) {
         });
       }
 
+      visited.add(current.id);
       onNodeStatus(current.id, "running", { startedAt: Date.now() });
       onLog({
         level: "info",
@@ -108,6 +100,7 @@ export async function executeWorkflow(workflow, options = {}) {
       } catch (err) {
         if (err instanceof CancelledError) throw err;
 
+        errorNodeId = current.id;
         onNodeStatus(current.id, "error", {
           finishedAt: Date.now(),
           error: err.message || String(err),
@@ -118,6 +111,13 @@ export async function executeWorkflow(workflow, options = {}) {
           message: err.message || String(err),
         });
 
+        // Mark outgoing edge as errored (if any).
+        const outgoing = workflow.edges.find((e) => e.source === current.id);
+        if (outgoing) {
+          errorEdgeId = outgoing.id;
+          onEdgeStatus(outgoing.id, "error", { finishedAt: Date.now() });
+        }
+
         throw new ExecutionError(err.message || String(err), {
           nodeId: current.id,
           cause: err,
@@ -125,7 +125,6 @@ export async function executeWorkflow(workflow, options = {}) {
       }
 
       recordResult(context, current.id, result);
-
       onNodeStatus(current.id, "success", {
         finishedAt: Date.now(),
         output: result.output,
@@ -137,41 +136,107 @@ export async function executeWorkflow(workflow, options = {}) {
         data: result.data,
       });
 
-      const nextId = resolveNextNodeId(workflow, current.id, result.output);
-      current = nextId ? nodeById.get(nextId) : null;
+      const nextEdge = resolveNextEdge(workflow, current.id, result.output);
+
+      if (nextEdge) {
+        onEdgeStatus(nextEdge.id, "active", { startedAt: Date.now() });
+        // Small delay so the UI can render the "active" state before
+        // the target node also becomes active.
+        await microtask();
+
+        // Only mark success if the target node runs successfully.
+        // We'll update it in the next iteration if it fails.
+        // Simplest approach: mark success now — if target fails, we
+        // overwrite the edge status with error above.
+        onEdgeStatus(nextEdge.id, "success", { finishedAt: Date.now() });
+        current = nodeById.get(nextEdge.target) || null;
+      } else {
+        current = null;
+      }
     }
+
+    // Mark unvisited nodes as skipped.
+    const skipped = [];
+    for (const n of workflow.nodes) {
+      if (!visited.has(n.id)) {
+        onNodeStatus(n.id, "skipped", {});
+        skipped.push(n.id);
+      }
+    }
+
+    const finishedAt = Date.now();
 
     onLog({
       level: "success",
       message: `Execution finished in ${steps} step(s).`,
     });
-    onFinish({ ok: true, steps });
-    return { ok: true, steps };
+
+    onResults(context.results);
+
+    onFinish({
+      ok: true,
+      steps,
+      startedAt,
+      finishedAt,
+      durationMs: finishedAt - startedAt,
+      skipped,
+      visited: [...visited],
+    });
+
+    return {
+      ok: true,
+      steps,
+      startedAt,
+      finishedAt,
+      durationMs: finishedAt - startedAt,
+      skipped,
+      visited: [...visited],
+    };
   } catch (err) {
     const isCancelled = err instanceof CancelledError;
+    const finishedAt = Date.now();
 
     onLog({
       level: isCancelled ? "warning" : "error",
       message: isCancelled ? "Execution cancelled." : err.message,
     });
-    onFinish({ ok: false, error: err });
-    return { ok: false, error: err };
+
+    onFinish({
+      ok: false,
+      error: err,
+      steps,
+      startedAt,
+      finishedAt,
+      durationMs: finishedAt - startedAt,
+      errorNodeId,
+      errorEdgeId,
+      visited: [...visited],
+    });
+
+    return {
+      ok: false,
+      error: err,
+      steps,
+      startedAt,
+      finishedAt,
+      durationMs: finishedAt - startedAt,
+    };
   }
 }
 
 /* ---------- Helpers ---------- */
 
-function resolveNextNodeId(workflow, sourceId, outputHandleId) {
+function resolveNextEdge(workflow, sourceId, outputHandleId) {
   const outgoing = workflow.edges.filter((e) => e.source === sourceId);
   if (outgoing.length === 0) return null;
 
-  // Prefer the edge whose sourceHandle matches the chosen output.
   const match = outgoing.find((e) => e.sourceHandle === outputHandleId);
-  if (match) return match.target;
+  if (match) return match;
 
-  // Fallback: if there's only one outgoing edge, use it.
-  if (outgoing.length === 1) return outgoing[0].target;
-
-  // Nothing matched — dead end.
+  if (outgoing.length === 1) return outgoing[0];
   return null;
+}
+
+function microtask() {
+  return Promise.resolve();
 }

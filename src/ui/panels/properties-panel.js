@@ -17,6 +17,7 @@ import { getNodeDefinition } from "../../nodes/registry.js";
 import { EditNodeDataCommand } from "../../history/commands/edit-node-data-command.js";
 import { DeleteSelectionCommand } from "../../history/commands/delete-selection-command.js";
 import { Field } from "./forms/index.js";
+import { createResultView } from "./result-view.js";
 
 /* ---------- Empty states ---------- */
 
@@ -111,6 +112,9 @@ function nodeConfigState({ node, definition, store, history }) {
 
   definition.renderConfig(node, formBody, onChange);
   container.appendChild(formBody);
+
+  // --- NEW: Tab switcher (Properties / Result) ---
+  container.appendChild(buildTabSection({ node, store }));
 
   // Inline validation
   const validationError = definition.validate?.(node);
@@ -222,4 +226,47 @@ export function createPropertiesPanel({ store, history }) {
   store.subscribe(render);
 
   return root;
+}
+
+function buildTabSection({ node, store }) {
+  const tabs = el("div", { class: "properties-tabs" });
+  const body = el("div", { class: "properties-tab-body" });
+
+  let active = "properties"; // or 'result'
+
+  const propertiesTab = el(
+    "button",
+    {
+      type: "button",
+      class: "properties-tab is-active",
+      onclick: () => switchTo("properties"),
+    },
+    "Properties",
+  );
+
+  const resultTab = el(
+    "button",
+    {
+      type: "button",
+      class: "properties-tab",
+      onclick: () => switchTo("result"),
+    },
+    "Result",
+  );
+
+  tabs.append(propertiesTab, resultTab);
+
+  const resultView = createResultView({ store, nodeId: node.id });
+
+  function switchTo(tab) {
+    active = tab;
+    propertiesTab.classList.toggle("is-active", active === "properties");
+    resultTab.classList.toggle("is-active", active === "result");
+    body.replaceChildren();
+    if (active === "result") body.appendChild(resultView);
+  }
+
+  switchTo("properties");
+
+  return el("div", { class: "properties-tabs-wrap" }, [tabs, body]);
 }

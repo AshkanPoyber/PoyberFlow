@@ -4,9 +4,10 @@
    Structure:
      workspace (relative, overflow-hidden)
        ├── grid     (background)
-       └── viewport (transform: translate + scale)
-              ├── edges SVG layer     ← NEW
-              └── nodes layer
+       ├── viewport (translate + scale)
+       │     ├── edges SVG layer
+       │     └── nodes layer
+       └── execution panel (bottom drawer, fixed to workspace)
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
@@ -24,7 +25,6 @@ export function createWorkspace() {
     style: { transformOrigin: "0 0" },
   });
 
-  // SVG layer for edges — sits under nodes.
   const edgesLayer = document.createElementNS(SVG_NS, "svg");
   edgesLayer.setAttribute("class", "edges-layer");
   edgesLayer.setAttribute("xmlns", SVG_NS);

@@ -66,6 +66,21 @@ export function createTopBar(
     ],
   );
 
+  const executionToggle = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "focus-ring h-8 w-8 rounded-md flex items-center justify-center border border-border bg-surface hover:bg-elevated text-secondary hover:text-primary transition-colors",
+      title: "Toggle execution panel",
+      onclick: () => {
+        const panel = document.querySelector(".execution-panel");
+        if (panel) panel.classList.toggle("is-expanded");
+      },
+    },
+    [el("i", { class: "fa-solid fa-terminal text-[11px]" })],
+  );
+
   function toggleRun() {
     if (runController.isRunning()) runController.stop();
     else runController.run();
@@ -139,6 +154,7 @@ export function createTopBar(
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         workflowMenu,
         runBtn,
+        executionToggle,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         historyControls,
       ]),

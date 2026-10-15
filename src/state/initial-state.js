@@ -25,7 +25,10 @@ export function createInitialState() {
       startedAt: null,
       finishedAt: null,
       nodeStates: {},
+      edgeStates: {},
       logs: [],
+      summary: null,
+      lastResults: {},
     },
     viewport: {
       x: 0,

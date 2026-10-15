@@ -1,15 +1,9 @@
 /* ============================================================
    Edges Renderer — draws edges in an SVG layer.
 
-   The SVG layer sits *inside* the viewport wrapper, so it shares
-   the same coordinate system as the nodes. No manual screen↔world
-   conversion is needed here.
-
-   Every edge is rendered as:
-     <g data-edge-id="...">
-       <path class="edge-hitbox" />     (thicker, invisible — for clicks)
-       <path class="edge-visible" />    (the actual styled line)
-     </g>
+   Runtime states (active / success / error) come from
+   state.runtime.edgeStates and drive the class names on each
+   edge group, so the visual layer stays purely declarative.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
@@ -20,34 +14,19 @@ import { getNodeDefinition } from "../../nodes/registry.js";
 const NODE_WIDTH = 220;
 const NODE_HEIGHT_FALLBACK = 80;
 
-/**
- * Measure a node's card in world space.
- * Uses the DOM element to get an accurate height if available.
- */
-function measureNodeCard(nodeEl) {
-  if (!nodeEl) return { width: NODE_WIDTH, height: NODE_HEIGHT_FALLBACK };
-  const card = nodeEl.firstElementChild;
-  if (!card) return { width: NODE_WIDTH, height: NODE_HEIGHT_FALLBACK };
-  const rect = card.getBoundingClientRect();
-  return { width: NODE_WIDTH, height: rect.height / getZoomRatio(card) };
+/* ---------- Handle position math ---------- */
+
+function handlePos(node, def, handleId, kind, size) {
+  const list = kind === "input" ? def.inputs : def.outputs;
+  const layoutTop = 8;
+  const gap = 22;
+  const index = list.findIndex((h) => h.id === handleId);
+  const top = layoutTop + (index >= 0 ? index : 0) * gap + gap / 2;
+  const x = kind === "input" ? node.position.x : node.position.x + size.width;
+  const y = node.position.y + top;
+  return { x, y };
 }
 
-function getZoomRatio(/* card */) {
-  // We don't actually need zoom here because getBoundingClientRect
-  // returns scaled size when transform: scale() is applied.
-  // But node.position is in world space, so we divide out the zoom.
-  // Simpler: read zoom from the workspace's transform style.
-  // For R3, we approximate by using the state viewport through
-  // a data attribute set by the viewport renderer.
-  const workspace = document.getElementById("workspace-viewport");
-  if (!workspace) return 1;
-  const match = /scale\(([\d.]+)\)/.exec(workspace.style.transform);
-  return match ? parseFloat(match[1]) : 1;
-}
-
-/**
- * Compute edge endpoints in world space.
- */
 function computeEdgeEndpoints(edge, workflow, nodeEls) {
   const sourceNode = findNode(workflow.nodes, edge.source);
   const targetNode = findNode(workflow.nodes, edge.target);
@@ -57,48 +36,35 @@ function computeEdgeEndpoints(edge, workflow, nodeEls) {
   const targetDef = getNodeDefinition(targetNode.type);
   if (!sourceDef || !targetDef) return null;
 
-  const sourceHandle =
-    sourceDef.outputs.find((h) => h.id === edge.sourceHandle) ||
-    sourceDef.outputs[0];
-  const targetHandle =
-    targetDef.inputs.find((h) => h.id === edge.targetHandle) ||
-    targetDef.inputs[0];
-  if (!sourceHandle || !targetHandle) return null;
-
   const sourceSize = measureNodeCard(nodeEls.get(sourceNode.id));
   const targetSize = measureNodeCard(nodeEls.get(targetNode.id));
 
   const sourcePos = handlePos(
     sourceNode,
-    sourceDef.outputs,
-    sourceHandle,
+    sourceDef,
+    edge.sourceHandle || sourceDef.outputs[0]?.id,
+    "output",
     sourceSize,
   );
   const targetPos = handlePos(
     targetNode,
-    targetDef.inputs,
-    targetHandle,
+    targetDef,
+    edge.targetHandle || targetDef.inputs[0]?.id,
+    "input",
     targetSize,
   );
 
   return { x1: sourcePos.x, y1: sourcePos.y, x2: targetPos.x, y2: targetPos.y };
 }
 
-function handlePos(node, list, handle, size) {
-  const layoutTop = 8;
-  const gap = 22;
-  const index = list.findIndex((h) => h.id === handle.id);
-  const top = layoutTop + index * gap + gap / 2;
-  const isInput =
-    list === node.inputs || (node.inputs && node.inputs.includes(handle));
-  const x = isInput ? node.position.x : node.position.x + size.width;
-  const y = node.position.y + top;
-  return { x, y };
+function measureNodeCard(nodeEl) {
+  if (!nodeEl) return { width: NODE_WIDTH, height: NODE_HEIGHT_FALLBACK };
+  const card = nodeEl.firstElementChild;
+  if (!card) return { width: NODE_WIDTH, height: NODE_HEIGHT_FALLBACK };
+  const rect = card.getBoundingClientRect();
+  return { width: NODE_WIDTH, height: rect.height };
 }
 
-/**
- * Look up the accent color for a node type (used to color edges).
- */
 function accentFor(node) {
   const def = getNodeDefinition(node.type);
   if (!def || !def.accentVar) return "var(--color-brand)";
@@ -126,9 +92,9 @@ export function createEdgesRenderer(edgesLayerEl, nodeElementsRef) {
   return function render(state) {
     const { edges, nodes } = state.workflow;
     const selected = new Set(state.selection.edgeIds);
+    const edgeStates = state.runtime?.edgeStates || {};
     const seen = new Set();
 
-    // Only consider edges whose endpoints both exist.
     for (const edge of edges) {
       const endpoints = computeEdgeEndpoints(
         edge,
@@ -166,6 +132,7 @@ export function createEdgesRenderer(edgesLayerEl, nodeElementsRef) {
       const sourceNode = findNode(nodes, edge.source);
       const color = sourceNode ? accentFor(sourceNode) : "var(--color-brand)";
       const isSelected = selected.has(edge.id);
+      const runtimeStatus = edgeStates[edge.id]?.status || null;
 
       const visible = group.querySelector(".edge-visible");
       const hit = group.querySelector(".edge-hitbox");
@@ -185,9 +152,11 @@ export function createEdgesRenderer(edgesLayerEl, nodeElementsRef) {
       hit.setAttribute("d", d);
 
       group.classList.toggle("is-selected", isSelected);
+      group.classList.toggle("is-active", runtimeStatus === "active");
+      group.classList.toggle("is-success", runtimeStatus === "success");
+      group.classList.toggle("is-error", runtimeStatus === "error");
     }
 
-    // Remove stale edges
     for (const [id, group] of elements) {
       if (!seen.has(id)) {
         group.remove();

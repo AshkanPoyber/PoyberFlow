@@ -51,6 +51,9 @@ import { focusIssue } from "./interaction/validation-focus.js";
 
 import { setMockMode, isMockMode } from "./engine/mock-fetcher.js";
 
+import { createExecutionPanel } from "./ui/panels/execution-panel.js";
+import { focusExecutionNode } from "./interaction/execution-focus.js";
+
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
 registerNode(outputNodeDefinition);
@@ -172,6 +175,13 @@ const validationBanner = createValidationBanner({
     focusIssue({ store, camera, workspaceEl: workspaceRoot }, issue),
 });
 workspaceRoot.appendChild(validationBanner);
+
+const executionPanel = createExecutionPanel({
+  store,
+  onFocusNode: (nodeId) =>
+    focusExecutionNode({ store, camera, workspaceEl: workspaceRoot }, nodeId),
+});
+workspaceRoot.appendChild(executionPanel);
 
 /* ---------- 10. Interactions ---------- */
 attachNodeSelection({ workspaceEl: workspaceRoot, store });

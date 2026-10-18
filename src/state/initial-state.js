@@ -41,6 +41,7 @@ export function createInitialState() {
     },
     ui: {
       theme: "dark",
+      snapToGrid: false,
     },
     validation: {
       ok: true,

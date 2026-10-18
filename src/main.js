@@ -41,6 +41,7 @@ import { delayNodeDefinition } from "./nodes/delay-node.js";
 import { createNode } from "./graph/node-factory.js";
 import { addNode } from "./graph/graph.js";
 import { AddNodeCommand } from "./history/commands/add-node-command.js";
+import { MoveNodesCommand } from "./history/commands/move-nodes-command.js";
 
 import {
   loadActiveWorkflow,
@@ -69,6 +70,11 @@ import { attachContextMenu } from "./interaction/context-menu-handler.js";
 import { createRunController } from "./interaction/run-controls.js";
 
 import { registerProject, setCurrentProject } from "./storage/projects.js";
+
+/* ---------- R11 additions ---------- */
+import { createMiniMap } from "./ui/panels/mini-map.js";
+import { attachFocusMode } from "./interaction/focus-mode.js";
+import { computeAutoLayout } from "./utils/auto-layout.js";
 
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
@@ -175,7 +181,6 @@ function openTemplates() {
         selection: { nodeIds: [], edgeIds: [] },
       });
 
-      // Reset history since we replaced the whole workflow.
       history.clear?.();
 
       toast.show({ kind: "success", text: `Template loaded: ${tpl.name}` });
@@ -186,7 +191,6 @@ function openTemplates() {
 /* ---------- 11. Workflow switching ---------- */
 
 function switchWorkflow(id) {
-  // Save current workflow first so it isn't lost.
   saveWorkflow(store.getState());
 
   const restored = loadWorkflow(id);
@@ -228,7 +232,33 @@ function switchWorkflow(id) {
   });
 }
 
-/* ---------- 12. Command Palette ---------- */
+/* ---------- 12. Auto Layout (R11) ---------- */
+
+function runAutoLayout() {
+  const { workflow } = store.getState();
+  if (workflow.nodes.length === 0) return;
+
+  const positions = computeAutoLayout(workflow.nodes, workflow.edges);
+  const moves = [];
+  for (const n of workflow.nodes) {
+    const next = positions.get(n.id);
+    if (!next) continue;
+    if (n.position.x === next.x && n.position.y === next.y) continue;
+    moves.push({ id: n.id, from: { ...n.position }, to: next });
+  }
+
+  if (moves.length === 0) return;
+
+  history.push(new MoveNodesCommand(moves));
+  toast.show({ kind: "success", text: "Auto layout applied" });
+
+  requestAnimationFrame(() => {
+    const r = workspaceRoot.getBoundingClientRect();
+    camera.fitToScreen(r, store.getState().workflow.nodes);
+  });
+}
+
+/* ---------- 13. Command Palette ---------- */
 
 function buildCommands() {
   const cmds = [];
@@ -283,6 +313,11 @@ function buildCommands() {
       run: () => openTemplates(),
     },
     {
+      label: "Auto layout",
+      icon: "fa-solid fa-wand-magic-sparkles",
+      run: () => runAutoLayout(),
+    },
+    {
       label: "Reset view",
       icon: "fa-solid fa-rotate-left",
       run: () => camera.reset(),
@@ -305,7 +340,15 @@ const commandPalette = createCommandPalette({
   commands: buildCommands(),
 });
 
-/* ---------- 13. Top bar ---------- */
+/* ---------- 14. Focus Mode (R11) ---------- */
+
+const focusMode = attachFocusMode({
+  app,
+  leftSidebar,
+  rightSidebar,
+});
+
+/* ---------- 15. Top bar ---------- */
 
 const topBar = createTopBar(store, {
   camera,
@@ -317,12 +360,14 @@ const topBar = createTopBar(store, {
   runController: runControllerGlobal,
   onOpenTemplates: openTemplates,
   onSwitchWorkflow: (id) => switchWorkflow(id),
+  onAutoLayout: runAutoLayout,
+  onToggleFocus: () => focusMode.toggle(),
 });
 
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
-/* ---------- 14. Renderers ---------- */
+/* ---------- 16. Renderers ---------- */
 
 const nodeElementsRef = { current: new Map() };
 
@@ -340,7 +385,7 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
-/* ---------- 15. Panels over workspace ---------- */
+/* ---------- 17. Panels over workspace ---------- */
 
 const validationBanner = createValidationBanner({
   store,
@@ -356,7 +401,16 @@ const executionPanel = createExecutionPanel({
 });
 workspaceRoot.appendChild(executionPanel);
 
-/* ---------- 16. Interactions ---------- */
+/* ---------- 18. Mini Map (R11) ---------- */
+
+const miniMap = createMiniMap({
+  store,
+  camera,
+  workspaceEl: workspaceRoot,
+});
+workspaceRoot.appendChild(miniMap);
+
+/* ---------- 19. Interactions ---------- */
 
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachEdgeSelection({ workspaceEl: workspaceRoot, store });
@@ -379,7 +433,7 @@ attachConnectionDrag({
 attachKeyboardShortcuts({ store, history });
 attachValidation(store);
 
-/* ---------- 17. Context menu ---------- */
+/* ---------- 20. Context menu ---------- */
 
 attachContextMenu({
   workspaceEl: workspaceRoot,
@@ -389,7 +443,7 @@ attachContextMenu({
   commandPalette,
 });
 
-/* ---------- 18. Auto-save ---------- */
+/* ---------- 21. Auto-save ---------- */
 
 attachAutosave(store, {
   onSaved: (payload) => {
@@ -400,11 +454,11 @@ attachAutosave(store, {
   },
 });
 
-/* ---------- 19. Register current project ---------- */
+/* ---------- 22. Register current project ---------- */
 
 registerProject(store.getState().workflow.metadata);
 
-/* ---------- 20. Seed if empty ---------- */
+/* ---------- 23. Seed if empty ---------- */
 
 {
   const { workflow } = store.getState();
@@ -422,7 +476,7 @@ registerProject(store.getState().workflow.metadata);
   }
 }
 
-/* ---------- 21. Ctrl+K shortcut ---------- */
+/* ---------- 24. Ctrl+K shortcut ---------- */
 
 window.addEventListener("keydown", (e) => {
   const mod = e.ctrlKey || e.metaKey;
@@ -432,11 +486,11 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-/* ---------- 22. First paint ---------- */
+/* ---------- 25. First paint ---------- */
 
 renderAll(store.getState());
 
-/* ---------- 23. Mock mode ---------- */
+/* ---------- 26. Mock mode ---------- */
 
 {
   const params = new URLSearchParams(window.location.search);
@@ -446,7 +500,7 @@ renderAll(store.getState());
   }
 }
 
-/* ---------- 24. Dev helpers ---------- */
+/* ---------- 27. Dev helpers ---------- */
 
 if (import.meta?.url) {
   window.__poyberflow = {

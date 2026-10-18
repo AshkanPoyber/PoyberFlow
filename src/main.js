@@ -27,7 +27,11 @@ import { attachKeyboardShortcuts } from "./interaction/keyboard-shortcuts.js";
 import { attachPan } from "./interaction/pan.js";
 import { attachZoom } from "./interaction/zoom.js";
 
-import { registerNode, getNodeDefinition } from "./nodes/registry.js";
+import {
+  registerNode,
+  getNodeDefinition,
+  getAllNodeDefinitions,
+} from "./nodes/registry.js";
 import { startNodeDefinition } from "./nodes/start-node.js";
 import { outputNodeDefinition } from "./nodes/output-node.js";
 import { httpNodeDefinition } from "./nodes/http-node.js";
@@ -38,7 +42,11 @@ import { createNode } from "./graph/node-factory.js";
 import { addNode } from "./graph/graph.js";
 import { AddNodeCommand } from "./history/commands/add-node-command.js";
 
-import { loadActiveWorkflow } from "./storage/local.js";
+import {
+  loadActiveWorkflow,
+  loadWorkflow,
+  saveWorkflow,
+} from "./storage/local.js";
 import { attachAutosave } from "./storage/autosave.js";
 import { createToastManager } from "./ui/panels/toast-manager.js";
 
@@ -53,6 +61,14 @@ import { setMockMode, isMockMode } from "./engine/mock-fetcher.js";
 
 import { createExecutionPanel } from "./ui/panels/execution-panel.js";
 import { focusExecutionNode } from "./interaction/execution-focus.js";
+
+import { createCommandPalette } from "./ui/panels/command-palette.js";
+import { showTemplatesDialog } from "./ui/panels/templates-dialog.js";
+import { attachContextMenu } from "./interaction/context-menu-handler.js";
+
+import { createRunController } from "./interaction/run-controls.js";
+
+import { registerProject, setCurrentProject } from "./storage/projects.js";
 
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
@@ -140,18 +156,173 @@ function handleAddNode(definition) {
 
 const leftSidebar = createLeftSidebar({ onAddNode: handleAddNode });
 const rightSidebar = createRightSidebar({ store, history });
+
+/* ---------- 9. Run controller (global) ---------- */
+
+const runControllerGlobal = createRunController({ store, toast });
+
+/* ---------- 10. Templates ---------- */
+
+function openTemplates() {
+  showTemplatesDialog({
+    rootEl: app,
+    onSelect: (tpl) => {
+      const { nodes, edges } = tpl.build();
+      const { workflow } = store.getState();
+
+      store.setState({
+        workflow: { ...workflow, nodes, edges },
+        selection: { nodeIds: [], edgeIds: [] },
+      });
+
+      // Reset history since we replaced the whole workflow.
+      history.clear?.();
+
+      toast.show({ kind: "success", text: `Template loaded: ${tpl.name}` });
+    },
+  });
+}
+
+/* ---------- 11. Workflow switching ---------- */
+
+function switchWorkflow(id) {
+  // Save current workflow first so it isn't lost.
+  saveWorkflow(store.getState());
+
+  const restored = loadWorkflow(id);
+  if (!restored.ok) {
+    toast.show({
+      kind: "error",
+      text: "Could not load workflow: " + restored.error,
+    });
+    return;
+  }
+
+  const p = restored.payload;
+  const { workflow, viewport } = store.getState();
+  store.setState({
+    workflow: {
+      ...workflow,
+      metadata: {
+        ...workflow.metadata,
+        ...p.metadata,
+        version: CURRENT_VERSION,
+      },
+      nodes: p.workflow.nodes,
+      edges: p.workflow.edges,
+    },
+    viewport: {
+      x: p.viewport?.x ?? viewport.x,
+      y: p.viewport?.y ?? viewport.y,
+      zoom: p.viewport?.zoom ?? viewport.zoom,
+    },
+    selection: { nodeIds: [], edgeIds: [] },
+  });
+
+  setCurrentProject(id);
+  history.clear?.();
+
+  toast.show({
+    kind: "success",
+    text: `Switched to ${p.metadata.name || "workflow"}`,
+  });
+}
+
+/* ---------- 12. Command Palette ---------- */
+
+function buildCommands() {
+  const cmds = [];
+
+  for (const def of getAllNodeDefinitions()) {
+    cmds.push({
+      label: `Add ${def.label}`,
+      hint: def.description || "",
+      icon: def.icon,
+      shortcut: "",
+      run: () => handleAddNode(def),
+    });
+  }
+
+  cmds.push(
+    {
+      label: "Run workflow",
+      icon: "fa-solid fa-play",
+      hint: "Execute the current workflow",
+      run: () => runControllerGlobal.run(),
+    },
+    {
+      label: "Stop execution",
+      icon: "fa-solid fa-stop",
+      hint: "Cancel a running workflow",
+      run: () => runControllerGlobal.stop(),
+    },
+    {
+      label: "Undo",
+      icon: "fa-solid fa-rotate-left",
+      shortcut: "Ctrl+Z",
+      run: () => history.undo(),
+    },
+    {
+      label: "Redo",
+      icon: "fa-solid fa-rotate-right",
+      shortcut: "Ctrl+Shift+Z",
+      run: () => history.redo(),
+    },
+    {
+      label: "Save workflow",
+      icon: "fa-regular fa-floppy-disk",
+      shortcut: "Ctrl+S",
+      run: () => {
+        saveWorkflow(store.getState());
+        toast.show({ kind: "success", text: "Workflow saved" });
+      },
+    },
+    {
+      label: "Open templates…",
+      icon: "fa-solid fa-shapes",
+      run: () => openTemplates(),
+    },
+    {
+      label: "Reset view",
+      icon: "fa-solid fa-rotate-left",
+      run: () => camera.reset(),
+    },
+    {
+      label: "Fit to screen",
+      icon: "fa-solid fa-expand",
+      run: () => {
+        const r = workspaceRoot.getBoundingClientRect();
+        camera.fitToScreen(r, store.getState().workflow.nodes);
+      },
+    },
+  );
+
+  return cmds;
+}
+
+const commandPalette = createCommandPalette({
+  rootEl: app,
+  commands: buildCommands(),
+});
+
+/* ---------- 13. Top bar ---------- */
+
 const topBar = createTopBar(store, {
   camera,
   workspaceEl: workspaceRoot,
   history,
   toast,
   rootEl: app,
+  commandPalette,
+  runController: runControllerGlobal,
+  onOpenTemplates: openTemplates,
+  onSwitchWorkflow: (id) => switchWorkflow(id),
 });
 
 middle.append(leftSidebar, workspaceRoot, rightSidebar);
 app.append(topBar, middle);
 
-/* ---------- 9. Renderers ---------- */
+/* ---------- 14. Renderers ---------- */
 
 const nodeElementsRef = { current: new Map() };
 
@@ -169,6 +340,8 @@ function renderAll(state) {
 
 store.subscribe(renderAll);
 
+/* ---------- 15. Panels over workspace ---------- */
+
 const validationBanner = createValidationBanner({
   store,
   onFocusIssue: (issue) =>
@@ -183,7 +356,8 @@ const executionPanel = createExecutionPanel({
 });
 workspaceRoot.appendChild(executionPanel);
 
-/* ---------- 10. Interactions ---------- */
+/* ---------- 16. Interactions ---------- */
+
 attachNodeSelection({ workspaceEl: workspaceRoot, store });
 attachEdgeSelection({ workspaceEl: workspaceRoot, store });
 attachRectangleSelection({
@@ -203,19 +377,35 @@ attachConnectionDrag({
   history,
 });
 attachKeyboardShortcuts({ store, history });
-const validationController = attachValidation(store);
+attachValidation(store);
 
-/* ---------- 11. Auto-save ---------- */
+/* ---------- 17. Context menu ---------- */
+
+attachContextMenu({
+  workspaceEl: workspaceRoot,
+  store,
+  history,
+  camera,
+  commandPalette,
+});
+
+/* ---------- 18. Auto-save ---------- */
+
 attachAutosave(store, {
-  onSaved: () => {
-    // Silent by default — no toast on every autosave.
+  onSaved: (payload) => {
+    if (payload?.metadata) registerProject(payload.metadata);
   },
   onError: (err) => {
     toast.show({ kind: "error", text: `Auto-save failed: ${err}` });
   },
 });
 
-/* ---------- 12. Seed if empty ---------- */
+/* ---------- 19. Register current project ---------- */
+
+registerProject(store.getState().workflow.metadata);
+
+/* ---------- 20. Seed if empty ---------- */
+
 {
   const { workflow } = store.getState();
   if (workflow.nodes.length === 0) {
@@ -232,10 +422,22 @@ attachAutosave(store, {
   }
 }
 
-/* ---------- 13. First paint ---------- */
+/* ---------- 21. Ctrl+K shortcut ---------- */
+
+window.addEventListener("keydown", (e) => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    commandPalette.open();
+  }
+});
+
+/* ---------- 22. First paint ---------- */
+
 renderAll(store.getState());
 
-/* ---------- Mock mode ---------- */
+/* ---------- 23. Mock mode ---------- */
+
 {
   const params = new URLSearchParams(window.location.search);
   if (params.get("mock") === "1") {
@@ -244,7 +446,8 @@ renderAll(store.getState());
   }
 }
 
-/* ---------- 14. Dev helpers ---------- */
+/* ---------- 24. Dev helpers ---------- */
+
 if (import.meta?.url) {
   window.__poyberflow = {
     store,

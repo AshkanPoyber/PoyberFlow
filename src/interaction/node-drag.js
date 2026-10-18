@@ -71,11 +71,23 @@ export function attachNodeDrag({ workspaceEl, store, history, camera }) {
 
     const { dx, dy } = camera.screenDeltaToWorldDelta(dxScreen, dyScreen);
 
+    const snapEnabled =
+      store.getState().ui.snapToGrid === true && !event.altKey;
+
     for (const [id, el] of drag.nodeEls) {
       const origin = drag.origins.get(id);
       if (!origin) continue;
-      el.style.left = `${origin.x + dx}px`;
-      el.style.top = `${origin.y + dy}px`;
+
+      let nextX = origin.x + dx;
+      let nextY = origin.y + dy;
+
+      if (snapEnabled) {
+        nextX = Math.round(nextX / 24) * 24;
+        nextY = Math.round(nextY / 24) * 24;
+      }
+
+      el.style.left = `${nextX}px`;
+      el.style.top = `${nextY}px`;
     }
   });
 

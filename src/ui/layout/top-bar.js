@@ -1,6 +1,6 @@
 /* ============================================================
    Top Bar — logo, workflow name, recent, menu, run, history,
-   zoom, theme, command palette.
+   zoom, theme, command palette, advanced toolbar (R11).
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
@@ -9,6 +9,7 @@ import { createZoomControls } from "./zoom-controls.js";
 import { createHistoryControls } from "./history-controls.js";
 import { createWorkflowMenu } from "./workflow-menu.js";
 import { createRecentWorkflows } from "./recent-workflows.js";
+import { createAdvancedToolbar } from "./toolbar-advanced.js";
 
 export function createTopBar(
   store,
@@ -22,6 +23,8 @@ export function createTopBar(
     runController,
     onOpenTemplates,
     onSwitchWorkflow,
+    onAutoLayout,
+    onToggleFocus,
   },
 ) {
   const logo = el("div", { class: "flex items-center gap-2.5" }, [
@@ -72,6 +75,15 @@ export function createTopBar(
     },
     [el("i", { class: "fa-solid fa-shapes text-[11px]" })],
   );
+
+  const advancedToolbar = createAdvancedToolbar({
+    store,
+    camera,
+    workspaceEl,
+    history,
+    onAutoLayout,
+    onToggleFocus,
+  });
 
   const runBtn = el(
     "button",
@@ -176,6 +188,7 @@ export function createTopBar(
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         workflowMenu,
         templatesBtn,
+        advancedToolbar,
         runBtn,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         historyControls,

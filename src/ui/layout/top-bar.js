@@ -1,5 +1,6 @@
 /* ============================================================
-   Top Bar — logo, workflow name, menu, history, zoom, theme.
+   Top Bar — logo, workflow name, recent, menu, run, history,
+   zoom, theme, command palette.
    ============================================================ */
 
 import { el } from "../../utils/dom.js";
@@ -7,11 +8,21 @@ import { toggleTheme } from "../theme/theme-manager.js";
 import { createZoomControls } from "./zoom-controls.js";
 import { createHistoryControls } from "./history-controls.js";
 import { createWorkflowMenu } from "./workflow-menu.js";
-import { createRunController } from "../../interaction/run-controls.js";
+import { createRecentWorkflows } from "./recent-workflows.js";
 
 export function createTopBar(
   store,
-  { camera, workspaceEl, history, toast, rootEl },
+  {
+    camera,
+    workspaceEl,
+    history,
+    toast,
+    rootEl,
+    commandPalette,
+    runController,
+    onOpenTemplates,
+    onSwitchWorkflow,
+  },
 ) {
   const logo = el("div", { class: "flex items-center gap-2.5" }, [
     el(
@@ -33,7 +44,7 @@ export function createTopBar(
     "div",
     {
       class:
-        "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-elevated",
+        "hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-elevated",
     },
     [
       el("i", { class: "fa-regular fa-file-lines text-secondary text-xs" }),
@@ -45,11 +56,22 @@ export function createTopBar(
     ],
   );
 
+  const recent = createRecentWorkflows({ store, onSwitch: onSwitchWorkflow });
+  workflowName.appendChild(recent.root);
+
   const workflowMenu = createWorkflowMenu({ store, toast, rootEl });
 
-  /* ---------- Run / Stop controller ---------- */
-
-  const runController = createRunController({ store, toast });
+  const templatesBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "focus-ring h-8 w-8 rounded-md flex items-center justify-center border border-border bg-surface hover:bg-elevated text-secondary hover:text-primary transition-colors",
+      title: "Templates",
+      onclick: () => onOpenTemplates?.(),
+    },
+    [el("i", { class: "fa-solid fa-shapes text-[11px]" })],
+  );
 
   const runBtn = el(
     "button",
@@ -66,27 +88,30 @@ export function createTopBar(
     ],
   );
 
-  const executionToggle = el(
-    "button",
-    {
-      type: "button",
-      class:
-        "focus-ring h-8 w-8 rounded-md flex items-center justify-center border border-border bg-surface hover:bg-elevated text-secondary hover:text-primary transition-colors",
-      title: "Toggle execution panel",
-      onclick: () => {
-        const panel = document.querySelector(".execution-panel");
-        if (panel) panel.classList.toggle("is-expanded");
-      },
-    },
-    [el("i", { class: "fa-solid fa-terminal text-[11px]" })],
-  );
-
   function toggleRun() {
+    if (!runController) return;
     if (runController.isRunning()) runController.stop();
     else runController.run();
   }
 
-  /* ---------- Other controls ---------- */
+  const paletteBtn = el(
+    "button",
+    {
+      type: "button",
+      class:
+        "focus-ring h-8 px-2.5 rounded-md flex items-center gap-1.5 border border-border bg-surface hover:bg-elevated text-secondary hover:text-primary transition-colors text-[12px]",
+      title: "Search (Ctrl+K)",
+      onclick: () => commandPalette?.open(),
+    },
+    [
+      el("i", { class: "fa-solid fa-magnifying-glass text-[11px]" }),
+      el(
+        "span",
+        { class: "hidden lg:inline font-mono text-[10px] opacity-60" },
+        "Ctrl K",
+      ),
+    ],
+  );
 
   const historyControls = createHistoryControls({ history });
   const zoomControls = createZoomControls({ store, camera, workspaceEl });
@@ -103,10 +128,7 @@ export function createTopBar(
     [el("i", { class: "fa-solid fa-moon text-sm" })],
   );
 
-  /* ---------- Reactive updates ---------- */
-
   store.subscribe((state) => {
-    // Theme icon
     const isDark = state.ui.theme === "dark";
     const themeIcon = themeBtn.querySelector("i");
     if (themeIcon) {
@@ -115,15 +137,15 @@ export function createTopBar(
         : "fa-solid fa-moon text-sm";
     }
 
-    // Workflow name
     const nameEl = document.getElementById("workflow-name-label");
     if (nameEl && state.workflow.metadata.name) {
-      if (nameEl.textContent !== state.workflow.metadata.name) {
-        nameEl.textContent = state.workflow.metadata.name;
+      if (nameEl.firstChild && nameEl.firstChild.nodeType === Node.TEXT_NODE) {
+        if (nameEl.firstChild.textContent !== state.workflow.metadata.name) {
+          nameEl.firstChild.textContent = state.workflow.metadata.name;
+        }
       }
     }
 
-    // Run / Stop button state
     const running = state.runtime?.executing === true;
     const runIcon = runBtn.querySelector("i");
     const runLabel = runBtn.querySelector("span");
@@ -153,10 +175,12 @@ export function createTopBar(
         workflowName,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         workflowMenu,
+        templatesBtn,
         runBtn,
-        executionToggle,
         el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
         historyControls,
+        el("div", { class: "w-px h-5 bg-[var(--color-border)] mx-0.5" }),
+        paletteBtn,
       ]),
       el("div", { class: "flex items-center gap-4" }, [zoomControls, themeBtn]),
     ],

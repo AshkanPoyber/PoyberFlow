@@ -4,6 +4,7 @@
    push(command)  -> applies `do` and pushes to past, clears future
    undo()         -> pops from past, calls `undo`, pushes to future
    redo()         -> pops from future, calls `do`, pushes to past
+   clear()        -> wipes both stacks (used by template / workflow load)
    ============================================================ */
 
 import { HISTORY_LIMIT } from "../core/constants.js";
@@ -47,5 +48,10 @@ export function createHistory(store) {
     return { past: past.length, future: future.length };
   }
 
-  return { push, undo, redo, canUndo, canRedo, size };
+  function clear() {
+    past = [];
+    future = [];
+  }
+
+  return { push, undo, redo, canUndo, canRedo, size, clear };
 }

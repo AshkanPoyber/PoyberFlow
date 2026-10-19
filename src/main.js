@@ -76,6 +76,8 @@ import { createMiniMap } from "./ui/panels/mini-map.js";
 import { attachFocusMode } from "./interaction/focus-mode.js";
 import { computeAutoLayout } from "./utils/auto-layout.js";
 
+import { installErrorBoundary } from "./core/error-boundary.js";
+
 /* ---------- 1. Node registrations ---------- */
 registerNode(startNodeDefinition);
 registerNode(outputNodeDefinition);
@@ -139,6 +141,7 @@ function computeSpawnPosition(workspaceEl, nodeCount) {
 /* ---------- 8. Layout ---------- */
 
 const app = document.getElementById("app");
+installErrorBoundary({ rootEl: document.body });
 const middle = el("div", { class: "flex-1 flex min-h-0" });
 
 const {

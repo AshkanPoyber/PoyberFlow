@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PoyberFlow — Visual Workflow Builder</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: ["class", '[data-theme="dark"]'],
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            colors: {
+              app: "var(--color-bg-app)",
+              surface: "var(--color-bg-surface)",
+              elevated: "var(--color-bg-elevated)",
+              border: "var(--color-border)",
+              "border-strong": "var(--color-border-strong)",
+              primary: "var(--color-text-primary)",
+              secondary: "var(--color-text-secondary)",
+              muted: "var(--color-text-muted)",
+              brand: "var(--color-brand)",
+              "brand-hover": "var(--color-brand-hover)",
+              accent: "var(--color-accent)",
+              success: "var(--color-success)",
+              warning: "var(--color-warning)",
+              error: "var(--color-error)",
+            },
+            boxShadow: {
+              node: "var(--shadow-node)",
+              "node-selected": "var(--shadow-node-selected)",
+            },
+            borderRadius: {
+              node: "10px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="./src/styles/tokens.css" />
+    <link rel="stylesheet" href="./src/styles/main.css" />
+  </head>
+  <body class="bg-app text-primary font-sans antialiased overflow-hidden">
+    <div id="app" class="h-screen w-screen flex flex-col"></div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

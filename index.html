@@ -3,13 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PoyberFlow — Visual Workflow Builder</title>
+
+    <title>PoyberFlow — Visual Workflow Builder for the Web</title>
+    <meta
+      name="description"
+      content="Build workflows visually. PoyberFlow is an interactive, graph-based workflow editor built with Vanilla JavaScript. Design, connect, and run workflows right in your browser."
+    />
+    <meta name="theme-color" content="#0B0D12" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PoyberFlow — Visual Workflow Builder" />
+    <meta
+      property="og:description"
+      content="Design, connect, and run workflows visually. Built with Vanilla JavaScript."
+    />
+    <meta property="og:image" content="./assets/og-image.png" />
+    <meta property="og:url" content="https://poyberflow.dev/" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PoyberFlow — Visual Workflow Builder" />
+    <meta
+      name="twitter:description"
+      content="Design, connect, and run workflows visually."
+    />
+    <meta name="twitter:image" content="./assets/og-image.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://poyberflow.dev/" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
 
@@ -35,36 +63,22 @@
               surface: "var(--color-bg-surface)",
               elevated: "var(--color-bg-elevated)",
               border: "var(--color-border)",
-              "border-strong": "var(--color-border-strong)",
               primary: "var(--color-text-primary)",
               secondary: "var(--color-text-secondary)",
               muted: "var(--color-text-muted)",
               brand: "var(--color-brand)",
-              "brand-hover": "var(--color-brand-hover)",
               accent: "var(--color-accent)",
-              success: "var(--color-success)",
-              warning: "var(--color-warning)",
-              error: "var(--color-error)",
-            },
-            boxShadow: {
-              node: "var(--shadow-node)",
-              "node-selected": "var(--shadow-node-selected)",
-            },
-            borderRadius: {
-              node: "10px",
             },
           },
         },
       };
     </script>
 
-    <!-- Custom styles -->
     <link rel="stylesheet" href="./src/styles/tokens.css" />
-    <link rel="stylesheet" href="./src/styles/main.css" />
+    <link rel="stylesheet" href="./src/styles/landing.css" />
   </head>
-  <body class="bg-app text-primary font-sans antialiased overflow-hidden">
-    <div id="app" class="h-screen w-screen flex flex-col"></div>
-
-    <script type="module" src="./src/main.js"></script>
+  <body class="bg-app text-primary font-sans antialiased">
+    <div id="landing"></div>
+    <script type="module" src="./src/landing.js"></script>
   </body>
 </html>

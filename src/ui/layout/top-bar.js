@@ -27,21 +27,25 @@ export function createTopBar(
     onToggleFocus,
   },
 ) {
-  const logo = el("div", { class: "flex items-center gap-2.5" }, [
-    el(
-      "div",
-      {
-        class:
-          "w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--color-brand)] text-white shadow-sm",
-      },
-      [el("i", { class: "fa-solid fa-diagram-project text-[13px]" })],
-    ),
-    el(
-      "span",
-      { class: "text-[15px] font-semibold tracking-tight text-primary" },
-      "PoyberFlow",
-    ),
-  ]);
+  const logo = el(
+    "a",
+    { href: "./index.html", class: "flex items-center gap-2.5" },
+    [
+      el(
+        "div",
+        {
+          class:
+            "w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--color-brand)] text-white shadow-sm",
+        },
+        [el("i", { class: "fa-solid fa-diagram-project text-[13px]" })],
+      ),
+      el(
+        "span",
+        { class: "text-[15px] font-semibold tracking-tight text-primary" },
+        "PoyberFlow",
+      ),
+    ],
+  );
 
   const workflowName = el(
     "div",

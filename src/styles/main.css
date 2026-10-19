@@ -1678,3 +1678,164 @@ textarea.form-control {
 #app.is-focus-mode .validation-banner {
   display: none;
 }
+
+/* ============================================================
+   Error Boundary
+   ============================================================ */
+
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.error-overlay.is-visible {
+  opacity: 1;
+}
+
+.error-panel {
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.error-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.error-panel-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-error) 15%, transparent);
+  color: var(--color-error);
+}
+
+.error-panel-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.error-panel-body {
+  padding: 14px 18px;
+  overflow-y: auto;
+}
+
+.error-panel-message {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+}
+
+.error-panel-stack {
+  margin: 0;
+  padding: 10px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.error-btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  transition: background-color 120ms ease;
+}
+
+.error-btn:hover {
+  background: var(--color-bg-elevated);
+}
+
+.error-btn-primary {
+  background: var(--color-brand);
+  border-color: transparent;
+  color: white;
+}
+
+.error-btn-primary:hover {
+  background: var(--color-brand-hover);
+}
+
+/* ============================================================
+   Responsive (R13)
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .mini-map {
+    display: none;
+  }
+  .validation-banner {
+    right: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Sidebars stack under top bar via a separate mobile approach.
+     For now, hide them by default and rely on the command palette. */
+  aside {
+    display: none;
+  }
+
+  .execution-panel {
+    left: 0;
+    right: 0;
+  }
+
+  .properties-root,
+  .validation-banner {
+    /* The banner is fine at full width on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .execution-panel {
+    max-height: 30vh;
+  }
+  .execution-panel.is-expanded {
+    max-height: 55vh;
+  }
+}

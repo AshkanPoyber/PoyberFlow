@@ -211,9 +211,32 @@ export function createNodeElement(node) {
 
 export function createNodesRenderer(nodesLayer, nodeElementsRef) {
   const elements = new Map(); // nodeId -> element
+  let lastSignature = "";
 
   return function render(state) {
     const { nodes } = state.workflow;
+
+    // Cheap signature: node ids + positions + selection + runtime states
+    const sig = [
+      nodes.length,
+      state.selection.nodeIds.length,
+      nodes
+        .map(
+          (n) =>
+            `${n.id}:${n.position.x},${n.position.y}:${
+              state.selection.nodeIds.includes(n.id) ? 1 : 0
+            }:${state.runtime?.nodeStates?.[n.id]?.status || ""}:${
+              state.validation?.errors?.some((e) => e.nodeId === n.id) ? 1 : 0
+            }:${
+              state.validation?.warnings?.some((e) => e.nodeId === n.id) ? 1 : 0
+            }`,
+        )
+        .join("|"),
+    ].join("::");
+
+    if (sig === lastSignature) return;
+    lastSignature = sig;
+
     const selected = new Set(state.selection.nodeIds);
     const seen = new Set();
 
@@ -226,7 +249,6 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
         elements.set(node.id, nodeEl);
         if (nodeElementsRef) nodeElementsRef.current = elements;
         nodesLayer.appendChild(nodeEl);
-        if (nodeElementsRef) nodeElementsRef.current = elements;
       } else {
         nodeEl.style.left = `${node.position.x}px`;
         nodeEl.style.top = `${node.position.y}px`;
@@ -237,7 +259,6 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
       card.classList.toggle("shadow-node-selected", isSelected);
       card.classList.toggle("shadow-node", !isSelected);
 
-      // Error badge visibility (driven by validation state)
       const hasError = (state.validation?.errors || []).some(
         (i) => i.nodeId === node.id,
       );
@@ -251,10 +272,8 @@ export function createNodesRenderer(nodesLayer, nodeElementsRef) {
         badgeEl.classList.toggle("is-warning", !hasError && hasWarning);
       }
 
-      // Runtime state (drives border color + pulse animation)
-      const runtimeState = state.runtime?.nodeStates?.[node.id];
-      const runtimeStatus = runtimeState?.status || null;
-
+      const runtimeStatus =
+        state.runtime?.nodeStates?.[node.id]?.status || null;
       const cardEl = nodeEl.firstElementChild;
       if (cardEl) {
         cardEl.classList.remove(
